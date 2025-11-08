@@ -1,1 +1,1 @@
-# GenAlpha
+# GenAlpha - diplomka
