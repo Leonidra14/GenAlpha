@@ -2,25 +2,26 @@ name: Deploy Web
 on:
   push:
     branches: [ main ]
-    paths: [ 'frontend/**' ]
+    paths: [ 'frontend/**' ]   # spustí se jen když změníš něco ve frontend/
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    env:
-      VITE_API_URL: ${{ secrets.VITE_API_URL }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20.19.0'
+
+      # instalace a build ve složce frontend
       - run: npm ci
+        working-directory: frontend
       - run: npm run build
-      - run: cd dist && zip -r ../web.zip .
+        working-directory: frontend
+
+      # nasadíme přímo obsah složky dist
       - uses: azure/webapps-deploy@v3
         with:
           app-name: web-genalpha
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE_WEB }}
-          package: ./web.zip
+          package: ./frontend/dist

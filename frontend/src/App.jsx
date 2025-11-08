@@ -7,7 +7,7 @@ export default function App() {
   useEffect(() => {
     ping().then(
       () => setStatus("API OK ✅"),
-      (e) => setStatus("API FAIL sad ❌ " + e.message)
+      (e) => setStatus("API FAIL ❌ " + e.message)
     );
   }, []);
 
