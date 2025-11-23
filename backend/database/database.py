@@ -4,6 +4,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
+load_dotenv()
 
 
 # Nastavení připojení k PostgreSQL databázi (název DB: GenAlpha)

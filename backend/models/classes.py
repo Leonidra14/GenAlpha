@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 from database import Base
 
+
 # Model pro tabulku tříd (classes)
 class Class(Base):
     __tablename__ = "classes"

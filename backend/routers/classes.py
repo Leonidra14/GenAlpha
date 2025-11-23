@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 
-from database import get_db
+from database.database import get_db
 from models.users import User
 from models.classes import Class
+
 
 from pydantic import BaseModel
 
