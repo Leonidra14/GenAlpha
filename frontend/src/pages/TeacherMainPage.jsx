@@ -5,7 +5,7 @@ const TeacherMainPage = () => {
   const [classes, setClasses] = useState([]);
 
   useEffect(() => {
-    fetch('/api/classes') // uprav podle backendu
+    fetch(`${API_URL}/classes/teacher/1`)
       .then(res => res.json())
       .then(data => setClasses(data))
       .catch(err => console.error('Chyba při načítání tříd:', err));
