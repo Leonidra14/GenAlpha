@@ -1,10 +1,10 @@
 import React from "react";
-import TeacherDashboard from "./pages/TeacherDashboard";
+import TeacherMainPage from "./pages/TeacherMainPage";
 
 function App() {
   return (
     <div>
-      <TeacherDashboard />
+      <TeacherMainPage />
     </div>
   );
 }

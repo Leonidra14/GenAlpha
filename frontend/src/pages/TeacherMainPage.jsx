@@ -1,37 +1,27 @@
-import React, { useEffect, useState } from "react";
-import { fetchTeacherData } from "../api/teacherApi";
-import TeacherClassCard from "../components/TeacherClassCard";
+import React, { useEffect, useState } from 'react';
+import TeacherClassCard from '../components/TeacherClassCard';
+import './TeacherMainPage.css'; // můžeš vytvořit vlastní styl
 
-const TeacherDashboard = () => {
-  const [teacher, setTeacher] = useState(null);
-  const teacherId = "teacher123"; // budeš brát z loginu/session později
+const TeacherMainPage = () => {
+  const [classes, setClasses] = useState([]);
 
   useEffect(() => {
-    const loadData = async () => {
-      const data = await fetchTeacherData(teacherId);
-      setTeacher(data);
-    };
-    loadData();
+    fetch('/api/classes') // uprav podle backendu
+      .then(res => res.json())
+      .then(data => setClasses(data))
+      .catch(err => console.error('Chyba při načítání tříd:', err));
   }, []);
 
-  if (!teacher) return <p>Načítám…</p>;
-
   return (
-    <div className="dashboard">
-      <h1>Vítej, {teacher.name}</h1>
-      <h2>Tvoje třídy</h2>
-      <div className="class-list">
-        {teacher.classes.map((cls) => (
-          <TeacherClassCard
-            key={cls.id}
-            className={cls.name}
-            subjectCount={cls.topics.length}
-            onClick={() => console.log("Kliknuto na", cls.name)}
-          />
+    <div className="teacher-dashboard">
+      <h1>Tvé Třídy</h1>
+      <div className="class-grid">
+        {classes.map(c => (
+          <TeacherClassCard key={c.id} classInfo={c} />
         ))}
       </div>
     </div>
   );
 };
 
-export default TeacherDashboard;
+export default TeacherMainPage;
