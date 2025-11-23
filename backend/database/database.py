@@ -1,22 +1,23 @@
-# database.py
+# app/database/database.py
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 import os
 from dotenv import load_dotenv
+
 load_dotenv()
 
+DATABASE_URL = os.getenv("DB_URL")
 
-# Nastavení připojení k PostgreSQL databázi (název DB: GenAlpha)
-DATABASE_URL =  os.getenv("DB_URL")
+if not DATABASE_URL:
+    # jen pro debug, ať víš, že chybí proměnná
+    raise RuntimeError("DB_URL není nastavené v .env souboru")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Deklarativní základna pro ORM modely
 Base = declarative_base()
 
-# Dependency pro získání DB session (používá se v routách FastAPI)
+
 def get_db():
     db = SessionLocal()
     try:

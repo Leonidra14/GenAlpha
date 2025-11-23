@@ -1,9 +1,10 @@
+// src/App.jsx
 import React from "react";
+import "./App.css";
 import TeacherMainPage from "./pages/TeacherMainPage";
 
 function App() {
   return (
-    <div>AHoj</div>,
     <div>
       <TeacherMainPage />
     </div>

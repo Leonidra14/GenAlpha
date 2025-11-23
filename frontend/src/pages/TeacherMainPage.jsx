@@ -1,22 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import TeacherClassCard from '../components/TeacherClassCard';
+// src/pages/TeacherMainPage.jsx
+import React, { useEffect, useState } from "react";
+import TeacherClassCard from "../components/TeacherClassCard";
+import { getTeacherClasses } from "../api/api";
 
-const TeacherMainPage = () => { 
+const TeacherMainPage = () => {
   const [classes, setClasses] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_URL}/classes/teacher/1`)
-      .then(res => res.json())
-      .then(data => setClasses(data))
-      .catch(err => console.error('Chyba při načítání tříd:', err));
+    getTeacherClasses()
+      .then((data) => setClasses(data))
+      .catch((err) => {
+        console.error("Chyba při načítání tříd:", err);
+        setError("Nepodařilo se načíst třídy.");
+      });
   }, []);
 
   return (
     <div className="teacher-dashboard">
-      <h1>Tvé Třídy</h1>
+      <h1>Tvé třídy</h1>
+      {error && <p style={{ color: "red" }}>{error}</p>}
       <div className="class-grid">
-        {classes.map(c => (
-          <TeacherClassCard key={c.id} classInfo={c} />
+        {classes.map((c) => (
+          <TeacherClassCard key={c.class_id} classInfo={c} />
         ))}
       </div>
     </div>
