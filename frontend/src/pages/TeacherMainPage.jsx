@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import TeacherClassCard from '../components/TeacherClassCard';
-import './TeacherMainPage.css'; // můžeš vytvořit vlastní styl
 
-const TeacherMainPage = () => {
+const TeacherMainPage = () => { 
   const [classes, setClasses] = useState([]);
 
   useEffect(() => {
