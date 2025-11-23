@@ -1,5 +1,4 @@
 import React from 'react';
-import './TeacherClassCard.css';
 
 const TeacherClassCard = ({ classInfo }) => (
   <div className="class-card">
