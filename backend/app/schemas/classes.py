@@ -6,6 +6,10 @@ class ClassOut(BaseModel):
     subject: str
     teacher_id: int
     grade: Optional[int] = None
+    custom_name: Optional[str] = None
+    note: Optional[str] = None
+    active: bool
+    num_students: int
 
     class Config:
         from_attributes = True
@@ -17,3 +21,6 @@ class ClassCreate(BaseModel):
 class ClassUpdate(BaseModel):
     subject: Optional[str] = None
     grade: Optional[int] = None
+    custom_name: Optional[str] = None
+    note: Optional[str] = None
+    active: Optional[bool] = None

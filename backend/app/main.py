@@ -6,6 +6,8 @@ from routers.auth import router as auth_router
 from database.database import engine, Base
 from routers import classes as classes_router
 from routers.topics import router as topics_router
+from routers.enrollments import router as enrollments_router
+
 
 
 # import modelů kvůli registraci v Base
@@ -13,6 +15,7 @@ from models.users import User  # noqa
 from models.classes import Class  # noqa
 from models.enrollments import Enrollment  # noqa
 from models.topics import Topic  # noqa
+from models.enrollments import Enrollment  # noqa
 
 
 
@@ -44,4 +47,7 @@ app.include_router(classes_router.router, prefix="/classes", tags=["classes"])
 app.include_router(auth_router)
 # router pro témata
 app.include_router(topics_router)
+# router pro zápisy studentů do tříd
+app.include_router(enrollments_router, tags=["enrollments"])
+
 
