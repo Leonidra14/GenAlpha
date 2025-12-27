@@ -1,14 +1,21 @@
 # app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from routers.auth import router as auth_router
 
 from database.database import engine, Base
 from routers import classes as classes_router
+from routers.topics import router as topics_router
+
 
 # import modelů kvůli registraci v Base
 from models.users import User  # noqa
 from models.classes import Class  # noqa
 from models.enrollments import Enrollment  # noqa
+from models.topics import Topic  # noqa
+
+
+
 
 # vytvoření tabulek
 Base.metadata.create_all(bind=engine)
@@ -30,10 +37,11 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
-def health():
-    return "ok"
-
 
 # router pro třídy
-app.include_router(classes_router.router)
+app.include_router(classes_router.router, prefix="/classes", tags=["classes"])
+# router pro autentizaci
+app.include_router(auth_router)
+# router pro témata
+app.include_router(topics_router)
+

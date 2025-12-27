@@ -9,8 +9,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DB_URL")
 
 if not DATABASE_URL:
-    # jen pro debug, ať víš, že chybí proměnná
-    raise RuntimeError("DB_URL není nastavené v .env souboru")
+    raise RuntimeError("DB_URL not in .env file")
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

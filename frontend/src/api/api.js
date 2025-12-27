@@ -1,14 +1,36 @@
-// src/api/api.js
-export const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+import { apiFetch } from "./client";
 
-export async function getTeacherClasses(teacherId = 1) {
-  const res = await fetch(`${API_URL}/classes/teacher/${teacherId}`);
-  if (!res.ok) throw new Error("Nepodařilo se načíst třídy");
-  return await res.json();
+
+// ===== TŘÍDY =====
+export function getTeacherClasses() {
+  return apiFetch("/classes/me");
 }
 
-export async function ping() {
-  const r = await fetch(`${API_URL}/health`);
-  if (!r.ok) throw new Error("API health failed");
-  return r.text();
+export function getClassDetail(classId) {
+  return apiFetch(`/classes/${classId}`);
+}
+
+// ===== TOPICS / KAPITOLY =====
+export function getClassTopics(classId) {
+  return apiFetch(`/classes/${classId}/topics`);
+}
+
+export function createTopic(classId, payload) {
+  return apiFetch(`/classes/${classId}/topics`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateTopic(classId, topicId, payload) {
+  return apiFetch(`/classes/${classId}/topics/${topicId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteTopic(classId, topicId) {
+  return apiFetch(`/classes/${classId}/topics/${topicId}`, {
+    method: "DELETE",
+  });
 }

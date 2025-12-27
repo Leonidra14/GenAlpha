@@ -8,7 +8,8 @@ class Class(Base):
     __tablename__ = "classes"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)
+    subject = Column(String, nullable=False)
+    grade = Column(Integer, nullable=False)
     teacher_id = Column(Integer, ForeignKey("users.id"), nullable=False)
 
     # vztahy
@@ -18,6 +19,5 @@ class Class(Base):
         back_populates="class_",
         cascade="all, delete-orphan"
     )
-    # zatím BEZ assignments a activities – až budeš mít modely, přidáme
-    # assignments = relationship("Assignment", back_populates="class")
-    # activities = relationship("Activity", back_populates="class")
+    topics = relationship("Topic", back_populates="class_", cascade="all, delete-orphan")
+
