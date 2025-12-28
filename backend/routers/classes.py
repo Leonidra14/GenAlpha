@@ -7,6 +7,9 @@ from models.users import User
 from models.classes import Class
 from app.deps.auth import require_teacher
 from app.schemas.classes import ClassOut, ClassUpdate
+from models.enrollments import Enrollment
+from app.schemas.students import StudentOut
+from app.schemas.classes import ClassCreate
 
 router = APIRouter(tags=["classes"])
 
@@ -100,3 +103,56 @@ def update_class(class_id: int, payload: ClassUpdate, user=Depends(require_teach
 
     cl = db.query(Class).filter(Class.id == class_id).options(joinedload(Class.enrollments)).first()
     return to_class_out(cl)
+
+@router.get("/{class_id}/students", response_model=list[StudentOut])
+def get_students_for_class(
+    class_id: int,
+    db: Session = Depends(get_db),
+    teacher=Depends(require_teacher),
+    ):
+    cls = db.query(Class).filter(Class.id == class_id, Class.teacher_id == teacher.id).first()
+    if not cls:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    students = (
+        db.query(User)
+        .join(Enrollment, Enrollment.student_id == User.id)
+        .filter(Enrollment.class_id == class_id)
+        .filter(User.role == "student")
+        .order_by(User.last_name.asc(), User.first_name.asc(), User.id.asc())
+        .all()
+    )
+
+    return students
+
+@router.post("", response_model=ClassOut)
+def create_class(
+    payload: ClassCreate,
+    db: Session = Depends(get_db),
+    teacher=Depends(require_teacher),
+):
+    # základní validace
+    if not payload.subject.strip():
+        raise HTTPException(status_code=400, detail="Subject is required")
+    if payload.grade is None or payload.grade <= 0:
+        raise HTTPException(status_code=400, detail="Grade must be a positive number")
+
+    cls = Class(
+        subject=payload.subject.strip(),
+        grade=payload.grade,
+        custom_name=payload.custom_name.strip() if payload.custom_name and payload.custom_name.strip() else None,
+        note=payload.note.strip() if payload.note and payload.note.strip() else None,
+        active=payload.active,
+        teacher_id=teacher.id,
+    )
+
+    db.add(cls)
+    db.commit()
+    db.refresh(cls)
+
+    try:
+        cls.num_students = 0
+    except Exception:
+        pass
+
+    return cls

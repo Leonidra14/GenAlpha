@@ -48,6 +48,6 @@ app.include_router(auth_router)
 # router pro témata
 app.include_router(topics_router)
 # router pro zápisy studentů do tříd
-app.include_router(enrollments_router, tags=["enrollments"])
+app.include_router(enrollments_router, prefix="/classes", tags=["enrollments"])
 
 

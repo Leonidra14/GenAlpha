@@ -24,3 +24,10 @@ class ClassUpdate(BaseModel):
     custom_name: Optional[str] = None
     note: Optional[str] = None
     active: Optional[bool] = None
+
+class ClassCreate(BaseModel):
+    subject: str
+    grade: int
+    custom_name: Optional[str] = None
+    note: Optional[str] = None
+    active: bool = True

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
+from pydantic import Field
 
 class StudentOut(BaseModel):
     id: int
@@ -18,14 +19,6 @@ class StudentCreate(BaseModel):
     password: str  
 
 class StudentPasswordUpdate(BaseModel):
-    password: str  
+    password: str = Field(min_length=8, max_length=72)
 
-class EnrollmentOut(BaseModel):
-    id: int
-    class_id: int
-    student_id: int
-    created_at: datetime
-    student: StudentOut
 
-    class Config:
-        from_attributes = True

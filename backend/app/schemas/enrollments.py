@@ -1,13 +1,17 @@
+from app.schemas.students import StudentOut
 from pydantic import BaseModel
+from datetime import datetime
 
-class StudentOut(BaseModel):
-    id: int
-    first_name: str
-    last_name: str
-    email: str
-
-    class Config:
-        from_attributes = True
 
 class EnrollmentCreate(BaseModel):
     student_id: int
+
+class EnrollmentOut(BaseModel):
+    id: int
+    class_id: int
+    student_id: int
+    created_at: datetime
+    student: StudentOut
+
+    class Config:
+        from_attributes = True
