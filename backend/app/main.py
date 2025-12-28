@@ -7,6 +7,8 @@ from database.database import engine, Base
 from routers import classes as classes_router
 from routers.topics import router as topics_router
 from routers.enrollments import router as enrollments_router
+from routers import note_generation as note_generation_router
+
 
 
 
@@ -49,5 +51,8 @@ app.include_router(auth_router)
 app.include_router(topics_router)
 # router pro zápisy studentů do tříd
 app.include_router(enrollments_router, prefix="/classes", tags=["enrollments"])
+# router pro generování poznámek
+app.include_router(note_generation_router.router, tags=["note_generation"])
+
 
 
