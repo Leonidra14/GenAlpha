@@ -1,6 +1,6 @@
-// src/pages/TeacherClassDetail.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+
 import {
   getClassDetail,
   getClassTopics,
@@ -9,9 +9,12 @@ import {
   deleteTopic,
 } from "../api/api";
 
+import ClassSettingsModal from "../components/ClassSettingsModal";
+import ClassStudentsModal from "../components/ClassStudentsModal";
+
 export default function TeacherClassDetail() {
   const { classId } = useParams();
-  const nav = useNavigate();
+  const navigate = useNavigate();
 
   const [cls, setCls] = useState(null);
   const [topics, setTopics] = useState([]);
@@ -19,18 +22,23 @@ export default function TeacherClassDetail() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [studentsOpen, setStudentsOpen] = useState(false);
+
+  function openTopic(topicId) {
+    navigate(`/teacher/classes/${classId}/topics/${topicId}`);
+  }
+
   async function load() {
     setError("");
     setLoading(true);
     try {
       const c = await getClassDetail(classId);
-      setCls(c);
-
       const t = await getClassTopics(classId);
-      setTopics(t);
+      setCls(c);
+      setTopics(t || []);
     } catch (e) {
-      console.error(e);
-      setError("Nepodařilo se načíst detail třídy nebo kapitoly.");
+      setError(e?.message || "Nepodařilo se načíst třídu.");
     } finally {
       setLoading(false);
     }
@@ -38,126 +46,207 @@ export default function TeacherClassDetail() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId]);
 
-  const header =
-    cls?.grade != null
-      ? `${cls.grade}. třída – ${cls.subject}`
-      : cls?.subject ?? "Třída";
-
-  async function onAdd(e) {
+  async function onAddTopic(e) {
     e.preventDefault();
-    const title = newTitle.trim();
-    if (!title) return;
+    if (!newTitle.trim()) return;
 
     try {
-      const created = await createTopic(classId, { title, active: true });
-      setTopics((prev) => [...prev, created]);
+      await createTopic(classId, { title: newTitle.trim() });
       setNewTitle("");
+      await load();
     } catch (e) {
-      console.error(e);
-      setError("Nepodařilo se přidat kapitolu.");
+      alert(e?.message || "Nepodařilo se vytvořit kapitolu.");
     }
   }
 
-  async function onRename(topic) {
-    const next = prompt("Upravit název kapitoly:", topic.title);
-    if (next === null) return;
-    const trimmed = next.trim();
-    if (!trimmed) return;
-
+  async function onToggleTopic(topic) {
     try {
-      const updated = await updateTopic(classId, topic.id, { title: trimmed });
-      setTopics((prev) => prev.map((t) => (t.id === topic.id ? updated : t)));
+      await updateTopic(classId, topic.id, {
+        title: topic.title,
+        active: !topic.active,
+      });
+      await load();
     } catch (e) {
-      console.error(e);
-      setError("Nepodařilo se upravit kapitolu.");
+      alert(e?.message || "Nepodařilo se změnit stav kapitoly.");
     }
   }
 
-  async function onToggleActive(topic) {
-    try {
-      const updated = await updateTopic(classId, topic.id, { active: !topic.active });
-      setTopics((prev) => prev.map((t) => (t.id === topic.id ? updated : t)));
-    } catch (e) {
-      console.error(e);
-      setError("Nepodařilo se změnit aktivitu kapitoly.");
-    }
-  }
-
-  async function onDelete(topic) {
-    if (!confirm("Opravdu smazat kapitolu?")) return;
+  async function onDeleteTopic(topic) {
+    const ok = window.confirm("Opravdu chceš tuto kapitolu smazat?");
+    if (!ok) return;
 
     try {
       await deleteTopic(classId, topic.id);
-      setTopics((prev) => prev.filter((t) => t.id !== topic.id));
+      await load();
     } catch (e) {
-      console.error(e);
-      setError("Nepodařilo se smazat kapitolu.");
+      alert(e?.message || "Nepodařilo se smazat kapitolu.");
     }
   }
 
-  const activeTopics = topics.filter((t) => t.active);
-  const inactiveTopics = topics.filter((t) => !t.active);
+  if (loading) return <div>Načítám…</div>;
+  if (error) return <div style={{ color: "red" }}>{error}</div>;
+  if (!cls) return null;
+
+  const title =
+    cls.custom_name && cls.custom_name.trim()
+      ? cls.custom_name
+      : cls.grade != null
+      ? `${cls.grade}. třída – ${cls.subject}`
+      : `Třída – ${cls.subject}`;
+
+  const btnStyle = {
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: "1px solid #2b2b2b",
+    background: "#1b1b1b",
+    color: "#fff",
+    cursor: "pointer",
+  };
+
+  const topicStyle = {
+    padding: 10,
+    borderRadius: 10,
+    border: "1px solid #2b2b2b",
+    marginBottom: 8,
+    display: "flex",
+    justifyContent: "space-between",
+    cursor: "pointer",
+  };
 
   return (
-    <div style={{ maxWidth: 1000, margin: "0 auto", padding: 16 }}>
-      <button onClick={() => nav("/teacher")}>← Zpět</button>
+    <div style={{ maxWidth: 900 }}>
+      {/* HLAVIČKA */}
+      <h1 style={{ marginBottom: 6 }}>{title}</h1>
 
-      <h1 style={{ marginTop: 12 }}>{header}</h1>
-      {error && <p style={{ color: "crimson" }}>{error}</p>}
-
-      {loading ? (
-        <p>Načítám…</p>
-      ) : (
-        <>
-          <form onSubmit={onAdd} style={{ display: "flex", gap: 8, margin: "16px 0" }}>
-            <input
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              placeholder="Nová kapitola (např. RGB model, Šifrování...)"
-              style={{ flex: 1, padding: 10 }}
-            />
-            <button type="submit">Přidat</button>
-          </form>
-
-          <h2>Aktivní kapitoly</h2>
-          {activeTopics.length === 0 ? (
-            <p>Žádné aktivní kapitoly.</p>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-              {activeTopics.map((t) => (
-                <div key={t.id} style={{ border: "1px solid #ddd", borderRadius: 12, padding: 12 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 10 }}>{t.title}</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button onClick={() => onRename(t)}>Upravit</button>
-                    <button onClick={() => onToggleActive(t)}>Deaktivovat</button>
-                    <button onClick={() => onDelete(t)}>Smazat</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <h2 style={{ marginTop: 20 }}>Neaktivní kapitoly</h2>
-          {inactiveTopics.length === 0 ? (
-            <p>Žádné neaktivní kapitoly.</p>
-          ) : (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
-              {inactiveTopics.map((t) => (
-                <div key={t.id} style={{ border: "1px solid #ddd", borderRadius: 12, padding: 12, opacity: 0.7 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 10 }}>{t.title}</div>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button onClick={() => onRename(t)}>Upravit</button>
-                    <button onClick={() => onToggleActive(t)}>Aktivovat</button>
-                    <button onClick={() => onDelete(t)}>Smazat</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </>
+      {cls.note && cls.note.trim() && (
+        <div style={{ marginBottom: 8, opacity: 0.85 }}>{cls.note}</div>
       )}
+
+      <div style={{ fontSize: 14, opacity: 0.7 }}>
+        Třída: {cls.grade ?? "—"}
+      </div>
+      <div style={{ fontSize: 14, opacity: 0.7 }}>
+        Předmět: {cls.subject}
+      </div>
+
+      {/* ACTION BUTTONS */}
+      <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+        <button style={btnStyle} onClick={() => setSettingsOpen(true)}>
+          ⚙️ Nastavení
+        </button>
+
+        <button style={btnStyle} onClick={() => setStudentsOpen(true)}>
+          👩‍🎓 Studenti ({cls.num_students ?? 0})
+        </button>
+
+        <button style={btnStyle} onClick={() => navigate("/teacher")}>
+          ← Zpět
+        </button>
+      </div>
+
+      {/* TOPICS */}
+      <div style={{ marginTop: 30 }}>
+        <h2>Kapitoly</h2>
+
+        {/* ADD TOPIC */}
+        <form onSubmit={onAddTopic} style={{ marginBottom: 16 }}>
+          <input
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            placeholder="Název nové kapitoly"
+            style={{
+              padding: "10px 12px",
+              borderRadius: 10,
+              border: "1px solid #2b2b2b",
+              background: "#0f0f0f",
+              color: "#fff",
+              width: 300,
+              marginRight: 8,
+            }}
+          />
+          <button style={btnStyle} type="submit">
+            ➕ Přidat
+          </button>
+        </form>
+
+        {/* ACTIVE */}
+        <h3>Aktivní</h3>
+        {topics.filter((t) => t.active).length === 0 && (
+          <div style={{ opacity: 0.6 }}>Žádné aktivní kapitoly</div>
+        )}
+
+        {topics
+          .filter((t) => t.active)
+          .map((t) => (
+            <div
+              key={t.id}
+              style={topicStyle}
+              onClick={() => openTopic(t.id)}
+            >
+              <div style={{ fontWeight: 700 }}>{t.title}</div>
+
+              <div
+                style={{ display: "flex", gap: 8 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button style={btnStyle} onClick={() => onToggleTopic(t)}>
+                  Deaktivovat
+                </button>
+                <button style={btnStyle} onClick={() => onDeleteTopic(t)}>
+                  Smazat
+                </button>
+              </div>
+            </div>
+          ))}
+
+        {/* INACTIVE */}
+        <h3 style={{ marginTop: 20 }}>Neaktivní</h3>
+        {topics.filter((t) => !t.active).length === 0 && (
+          <div style={{ opacity: 0.6 }}>Žádné neaktivní kapitoly</div>
+        )}
+
+        {topics
+          .filter((t) => !t.active)
+          .map((t) => (
+            <div
+              key={t.id}
+              style={{ ...topicStyle, opacity: 0.7 }}
+              onClick={() => openTopic(t.id)}
+            >
+              <div style={{ fontWeight: 700 }}>{t.title}</div>
+
+              <div
+                style={{ display: "flex", gap: 8 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button style={btnStyle} onClick={() => onToggleTopic(t)}>
+                  Aktivovat
+                </button>
+                <button style={btnStyle} onClick={() => onDeleteTopic(t)}>
+                  Smazat
+                </button>
+              </div>
+            </div>
+          ))}
+      </div>
+
+      {/* MODALS */}
+      <ClassSettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        classId={classId}
+        onSaved={() => load()}
+      />
+
+      <ClassStudentsModal
+        open={studentsOpen}
+        onClose={() => setStudentsOpen(false)}
+        classId={classId}
+        onChanged={() => load()}
+      />
     </div>
   );
 }

@@ -1,16 +1,23 @@
 import { apiFetch } from "./client";
 
 
-// ===== TŘÍDY =====
+// ===== CLASSES =====
 export function getTeacherClasses() {
   return apiFetch("/classes/me");
+}
+
+export function updateClass(classId, payload) {
+  return apiFetch(`/classes/${classId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getClassDetail(classId) {
   return apiFetch(`/classes/${classId}`);
 }
 
-// ===== TOPICS / KAPITOLY =====
+// ===== CHAPTERS =====
 export function getClassTopics(classId) {
   return apiFetch(`/classes/${classId}/topics`);
 }
@@ -32,5 +39,48 @@ export function updateTopic(classId, topicId, payload) {
 export function deleteTopic(classId, topicId) {
   return apiFetch(`/classes/${classId}/topics/${topicId}`, {
     method: "DELETE",
+  });
+}
+
+// ===== STUDENT/ENROLLMENTS =====
+export function getClassStudents(classId) {
+  return apiFetch(`/classes/${classId}/students`);
+}
+
+export function addExistingStudent(classId, studentId) {
+  return apiFetch(`/classes/${classId}/students/${studentId}`, { method: "POST" });
+}
+
+export function createAndEnrollStudent(classId, payload) {
+  return apiFetch(`/classes/${classId}/students`, { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function removeStudent(classId, studentId) {
+  return apiFetch(`/classes/${classId}/students/${studentId}`, { method: "DELETE" });
+}
+
+export function setStudentPassword(classId, studentId, payload) {
+  return apiFetch(`/classes/${classId}/students/${studentId}/password`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getAvailableStudents(classId, q = "") {
+  const qs = q ? `?q=${encodeURIComponent(q)}` : "";
+  return apiFetch(`/classes/${classId}/students/available${qs}`);
+}
+
+export function createClass(payload) {
+  return apiFetch(`/classes`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function generateTopicNotes(classId, topicId, { duration_minutes, raw_text }) {
+  return apiFetch(`/classes/${classId}/topics/${topicId}/generate-notes`, {
+    method: "POST",
+    body: JSON.stringify({ duration_minutes, raw_text }),
   });
 }

@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(
         env_file=".env",
-        extra="ignore",  # <-- důležité: nepadá to na dalších env proměnných
+        extra="ignore",  
     )
 
 settings = Settings()

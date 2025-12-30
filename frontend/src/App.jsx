@@ -6,6 +6,7 @@ import RequireAuth from "./components/RequireAuth";
 import TeacherMainPage from "./pages/TeacherMainPage";
 import TeacherRegister from "./pages/TeacherRegister";
 import TeacherClassDetail from "./pages/TeacherClassDetail";
+import TeacherTopicDetail from "./pages/TeacherTopicDetail";
 
 
 export default function App() {
@@ -16,8 +17,7 @@ export default function App() {
         <Route path="/teacher/login" element={<TeacherLogin />} />
         <Route path="/teacher/register" element={<TeacherRegister />} />
         <Route path="/teacher/classes/:classId" element={<RequireAuth><TeacherClassDetail /></RequireAuth>} />
-
-
+        <Route path="/teacher/classes/:classId/topics/:topicId" element={<TeacherTopicDetail />} />
 
         <Route
           path="/teacher"
