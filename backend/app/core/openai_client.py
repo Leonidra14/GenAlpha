@@ -1,8 +1,35 @@
-import os
 from openai import OpenAI
+from app.core.settings import settings
 
+
+# ---------- client ----------
 def get_openai_client() -> OpenAI:
-    return OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+    if not settings.openai_api_key:
+        raise RuntimeError("OPENAI_API_KEY není nastavený.")
+    return OpenAI(api_key=settings.openai_api_key)
 
-def get_openai_model() -> str:
-    return os.environ.get("OPENAI_MODEL", "gpt-4o-mini-2024-07-18")
+
+# ---------- models ----------
+def model_fast() -> str:
+    if not settings.openai_model_fast:
+        raise RuntimeError("OPENAI_MODEL_FAST není nastavený.")
+    return settings.openai_model_fast
+
+
+def model_quality() -> str:
+    if not settings.openai_model_quality:
+        raise RuntimeError("OPENAI_MODEL_QUALITY není nastavený.")
+    return settings.openai_model_quality
+
+
+# ---------- temperatures ----------
+def temp_context() -> float:
+    return settings.openai_temp_context
+
+
+def temp_autotag() -> float:
+    return settings.openai_temp_autotag
+
+
+def temp_quality() -> float:
+    return settings.openai_temp_quality

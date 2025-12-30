@@ -1,323 +1,291 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { generateTopicNotes } from "../api/api";
-
-const tabs = [
-  { key: "outline", label: "Osnova - učitele" },
-  { key: "student_notes", label: "Zápis pro studenty" },
-  { key: "results", label: "Výsledky studentů" },
-  { key: "edit_notes", label: "Vytvořit - upravit poznámky" },
-];
+import { generateNotesWithFiles } from "../api/api";
 
 export default function TeacherTopicDetail() {
   const { classId, topicId } = useParams();
-  const nav = useNavigate();
-
-  const [activeTab, setActiveTab] = useState("edit_notes");
+  const navigate = useNavigate();
 
   const [duration, setDuration] = useState(45);
   const [rawText, setRawText] = useState("");
+  const [files, setFiles] = useState([]);
 
-  const [running, setRunning] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
   const [result, setResult] = useState(null);
 
-  const pageStyle = {
-    minHeight: "100vh",
-    background: "#0b0f19",
-    color: "white",
-    padding: 20,
-  };
-
-  const cardStyle = {
-    maxWidth: 1200,
-    margin: "0 auto",
-    background: "#101826",
-    border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 14,
-    padding: 16,
-  };
-
-  const tabBarStyle = {
-    display: "flex",
-    gap: 10,
-    flexWrap: "wrap",
-    borderBottom: "1px solid rgba(255,255,255,0.10)",
-    paddingBottom: 10,
-    marginBottom: 14,
-  };
-
-  const tabStyle = (active) => ({
-    padding: "10px 12px",
-    borderRadius: 10,
-    cursor: "pointer",
-    border: active ? "1px solid rgba(255,255,255,0.22)" : "1px solid rgba(255,255,255,0.08)",
-    background: active ? "rgba(255,255,255,0.06)" : "transparent",
-    fontSize: 14,
-  });
-
-  const labelStyle = { fontSize: 13, opacity: 0.85, marginBottom: 6 };
-
-  const inputStyle = {
-    width: "100%",
-    background: "#0f172a",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 10,
-    padding: "10px 12px",
-    color: "white",
-    outline: "none",
-  };
-
-  const textareaStyle = {
-    width: "100%",
-    minHeight: 220,
-    resize: "vertical",
-    background: "#0f172a",
-    border: "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 10,
-    padding: 12,
-    color: "white",
-    outline: "none",
-    fontFamily: "inherit",
-  };
-
-  const btnStyle = (primary) => ({
-    padding: "10px 14px",
-    borderRadius: 10,
-    cursor: running ? "not-allowed" : "pointer",
-    border: "1px solid rgba(255,255,255,0.14)",
-    background: primary ? "rgba(239,68,68,0.90)" : "transparent",
-    color: "white",
-    opacity: running ? 0.7 : 1,
-  });
-
-  const twoCol = {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 12,
-  };
-
-  const boxStyle = {
-    background: "#0f172a",
-    border: "1px solid rgba(255,255,255,0.10)",
-    borderRadius: 12,
-    padding: 12,
-  };
-
-  const preStyle = {
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-word",
-    margin: 0,
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-    fontSize: 13,
-    lineHeight: 1.35,
-  };
-
-  const extracted = result?.extracted;
-
-  const extractedSummary = useMemo(() => {
-    if (!extracted) return null;
-    const dates = extracted.dates || [];
-    const entities = extracted.entities || [];
-    const events = extracted.events || [];
-    const terms = extracted.terms || [];
-    const claims = extracted.claims || [];
-    const missing = extracted.missing || [];
-    return { dates, entities, events, terms, claims, missing };
-  }, [extracted]);
-
-  async function runWorkflow() {
+  function onFilesChange(e) {
     setError("");
-    setResult(null);
+    const selected = Array.from(e.target.files || []);
 
-    if (!rawText.trim()) {
-      setError("Prosím vlož raw text.");
+    if (selected.length > 3) {
+      setError("Maximální počet souborů je 3.");
+      e.target.value = "";
+      setFiles([]);
       return;
     }
 
-    setRunning(true);
+    // povolené typy: pdf + obrázky
+    const allowed = new Set([
+      "application/pdf",
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+    ]);
+
+    const bad = selected.find((f) => !allowed.has((f.type || "").toLowerCase()));
+    if (bad) {
+      setError(`Nepodporovaný typ souboru: ${bad.name} (${bad.type || "unknown"}).`);
+      e.target.value = "";
+      setFiles([]);
+      return;
+    }
+
+    setFiles(selected);
+  }
+
+  async function onRun() {
+    setError("");
+    setResult(null);
+
+    if (!rawText.trim() && files.length === 0) {
+      setError("Zadej text nebo nahraj soubor.");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const data = await generateTopicNotes(classId, topicId, {
-        duration_minutes: Number(duration) || 45,
+      const data = await generateNotesWithFiles(classId, topicId, {
+        duration_minutes: duration,
         raw_text: rawText,
+        files,
       });
       setResult(data);
     } catch (e) {
       setError(e?.message || "Nepodařilo se spustit workflow.");
     } finally {
-      setRunning(false);
+      setLoading(false);
     }
   }
 
+  const btnStyle = {
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: "1px solid #2b2b2b",
+    background: "#1b1b1b",
+    color: "#fff",
+    cursor: "pointer",
+  };
+
+  const inputStyle = {
+    padding: "10px 12px",
+    borderRadius: 10,
+    border: "1px solid #2b2b2b",
+    background: "#0f0f0f",
+    color: "#fff",
+    width: "100%",
+  };
+
   return (
-    <div style={pageStyle}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>Kapitola – detail</div>
-        <button style={btnStyle(false)} onClick={() => nav(-1)}>← Zpět</button>
+    <div style={{ maxWidth: 900 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+        <button style={btnStyle} onClick={() => navigate(-1)}>
+          ← Zpět
+        </button>
       </div>
 
-      <div style={cardStyle}>
-        <div style={tabBarStyle}>
-          {tabs.map((t) => (
-            <div key={t.key} style={tabStyle(activeTab === t.key)} onClick={() => setActiveTab(t.key)}>
-              {t.label}
-            </div>
-          ))}
+      <h1 style={{ marginBottom: 10 }}>Kapitola – workflow</h1>
+
+      {/* Soft warning (jak jsi chtěla) */}
+      <div
+        style={{
+          border: "1px solid #2b2b2b",
+          borderRadius: 12,
+          padding: 12,
+          background: "#121212",
+          marginBottom: 14,
+          opacity: 0.9,
+        }}
+      >
+        ⚠️ Výstup je generovaný AI. Zkontroluj fakta a letopočty před použitím ve výuce.
+      </div>
+
+      {error && (
+        <div style={{ color: "#ff6b6b", marginBottom: 12, whiteSpace: "pre-wrap" }}>
+          {error}
         </div>
+      )}
 
-        {activeTab !== "edit_notes" ? (
-          <div style={{ opacity: 0.8, padding: 10 }}>
-            Zatím prázdné (MVP). Tady později bude obsah pro: <b>{tabs.find(x => x.key === activeTab)?.label}</b>.
+      {/* Duration */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 6, opacity: 0.85 }}>Délka hodiny (min)</div>
+        <input
+          type="number"
+          min={5}
+          max={240}
+          value={duration}
+          onChange={(e) => setDuration(Number(e.target.value || 45))}
+          style={{ ...inputStyle, maxWidth: 220 }}
+        />
+      </div>
+
+      {/* Raw text */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ marginBottom: 6, opacity: 0.85 }}>Text od učitele</div>
+        <textarea
+          value={rawText}
+          onChange={(e) => setRawText(e.target.value)}
+          placeholder="Vlož sem text (např. z Wikipedie, poznámky, osnovu...)"
+          style={{ ...inputStyle, minHeight: 160, resize: "vertical" }}
+        />
+      </div>
+
+      {/* File upload */}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ marginBottom: 6, opacity: 0.85 }}>
+          Přílohy (max 3) – PDF / obrázky (PNG/JPG/WEBP)
+        </div>
+        <input
+          type="file"
+          multiple
+          accept="application/pdf,image/*"
+          onChange={onFilesChange}
+          style={{ color: "#fff" }}
+        />
+
+        {files.length > 0 && (
+          <div
+            style={{
+              marginTop: 10,
+              border: "1px solid #2b2b2b",
+              borderRadius: 12,
+              padding: 10,
+              background: "#101010",
+            }}
+          >
+            <div style={{ marginBottom: 8, opacity: 0.85 }}>Vybrané soubory:</div>
+            <ul style={{ margin: 0, paddingLeft: 18, opacity: 0.9 }}>
+              {files.map((f) => (
+                <li key={f.name}>
+                  {f.name}{" "}
+                  <span style={{ opacity: 0.65 }}>
+                    ({Math.round(f.size / 1024)} KB)
+                  </span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              style={{ ...btnStyle, marginTop: 10 }}
+              onClick={() => setFiles([])}
+              type="button"
+            >
+              Odebrat soubory
+            </button>
           </div>
-        ) : (
-          <>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-              <div>
-                <div style={labelStyle}>Délka hodiny (min)</div>
-                <input
-                  style={inputStyle}
-                  type="number"
-                  value={duration}
-                  min={5}
-                  max={240}
-                  onChange={(e) => setDuration(e.target.value)}
-                />
-              </div>
-              <div />
-              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "flex-end" }}>
-                <button style={btnStyle(true)} onClick={runWorkflow} disabled={running}>
-                  {running ? "Běžím..." : "Run workflow"}
-                </button>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <div style={labelStyle}>Učitelský text (raw)</div>
-              <textarea
-                style={textareaStyle}
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                placeholder="Sem vlož text od učitele… (např. z Wikipedie)"
-              />
-            </div>
-
-            {error && (
-              <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.35)" }}>
-                {error}
-              </div>
-            )}
-
-            {result && (
-              <div style={{ marginTop: 14 }}>
-                {/* Warnings */}
-                {result.warnings?.length > 0 && (
-                  <div style={{ marginBottom: 12, padding: 10, borderRadius: 10, background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.28)" }}>
-                    <div style={{ fontWeight: 700, marginBottom: 6 }}>Upozornění</div>
-                    <ul style={{ margin: 0, paddingLeft: 18 }}>
-                      {result.warnings.map((w, i) => <li key={i}>{w}</li>)}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Extracted metadata */}
-                <div style={{ ...boxStyle, marginBottom: 12 }}>
-                  <div style={{ fontWeight: 800, marginBottom: 8 }}>Extrahované klíčové informace</div>
-
-                  {!extractedSummary ? (
-                    <div style={{ opacity: 0.8 }}>Žádná metadata.</div>
-                  ) : (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                      <div>
-                        <div style={{ fontWeight: 700, marginBottom: 6 }}>Časová osa / letopočty</div>
-                        {extractedSummary.dates.length === 0 ? (
-                          <div style={{ opacity: 0.8 }}>—</div>
-                        ) : (
-                          <ul style={{ margin: 0, paddingLeft: 18 }}>
-                            {extractedSummary.dates.map((d, i) => (
-                              <li key={i}>
-                                <b>{d.value}</b>{d.context ? ` — ${d.context}` : ""}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
-                      <div>
-                        <div style={{ fontWeight: 700, marginBottom: 6 }}>Osoby / entity</div>
-                        {(extractedSummary.entities.length === 0 && extractedSummary.events.length === 0) ? (
-                          <div style={{ opacity: 0.8 }}>—</div>
-                        ) : (
-                          <ul style={{ margin: 0, paddingLeft: 18 }}>
-                            {extractedSummary.entities.map((e, i) => (
-                              <li key={`en-${i}`}>{e.name} <span style={{ opacity: 0.75 }}>({e.type})</span></li>
-                            ))}
-                            {extractedSummary.events.map((e, i) => (
-                              <li key={`ev-${i}`}>{e.name} <span style={{ opacity: 0.75 }}>({e.type})</span></li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
-                      <div>
-                        <div style={{ fontWeight: 700, marginBottom: 6 }}>Pojmy</div>
-                        {extractedSummary.terms.length === 0 ? (
-                          <div style={{ opacity: 0.8 }}>—</div>
-                        ) : (
-                          <ul style={{ margin: 0, paddingLeft: 18 }}>
-                            {extractedSummary.terms.map((t, i) => (
-                              <li key={i}>{t.name}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
-                      <div>
-                        <div style={{ fontWeight: 700, marginBottom: 6 }}>Tvrzení (explicitně z textu)</div>
-                        {extractedSummary.claims.length === 0 ? (
-                          <div style={{ opacity: 0.8 }}>—</div>
-                        ) : (
-                          <ul style={{ margin: 0, paddingLeft: 18 }}>
-                            {extractedSummary.claims.map((c, i) => (
-                              <li key={i}>{c}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-
-                      <div style={{ gridColumn: "1 / -1" }}>
-                        <div style={{ fontWeight: 700, marginBottom: 6 }}>Chybí / nejistoty</div>
-                        {extractedSummary.missing.length === 0 ? (
-                          <div style={{ opacity: 0.8 }}>—</div>
-                        ) : (
-                          <ul style={{ margin: 0, paddingLeft: 18 }}>
-                            {extractedSummary.missing.map((m, i) => (
-                              <li key={i}>{m}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Notes */}
-                <div style={twoCol}>
-                  <div style={boxStyle}>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Teacher notes (MD)</div>
-                    <pre style={preStyle}>{result.teacher_notes_md || "—"}</pre>
-                  </div>
-
-                  <div style={boxStyle}>
-                    <div style={{ fontWeight: 800, marginBottom: 8 }}>Student notes (MD)</div>
-                    <pre style={preStyle}>{result.student_notes_md || "—"}</pre>
-                  </div>
-                </div>
-              </div>
-            )}
-          </>
         )}
       </div>
+
+      {/* Run */}
+      <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+        <button style={btnStyle} onClick={onRun} disabled={loading}>
+          {loading ? "Generuji…" : "▶ Spustit workflow"}
+        </button>
+      </div>
+
+      {/* Result */}
+      {result && (
+        <div style={{ marginTop: 18 }}>
+          {result.rejected ? (
+            <div
+              style={{
+                border: "1px solid #ff6b6b",
+                borderRadius: 12,
+                padding: 12,
+                background: "#1a0f0f",
+              }}
+            >
+              <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                Zamítnuto kontrolorem
+              </div>
+              <div style={{ opacity: 0.9 }}>{result.reject_reason}</div>
+            </div>
+          ) : (
+            <>
+              {Array.isArray(result.warnings) && result.warnings.length > 0 && (
+                <div
+                  style={{
+                    border: "1px solid #f5c542",
+                    borderRadius: 12,
+                    padding: 12,
+                    background: "#1a160a",
+                    marginBottom: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>Upozornění</div>
+                  <ul style={{ margin: 0, paddingLeft: 18 }}>
+                    {result.warnings.map((w, i) => (
+                      <li key={i} style={{ opacity: 0.9 }}>
+                        {w}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <div style={{ display: "grid", gap: 12 }}>
+                <div
+                  style={{
+                    border: "1px solid #2b2b2b",
+                    borderRadius: 12,
+                    padding: 12,
+                    background: "#101010",
+                  }}
+                >
+                  <div style={{ fontWeight: 800, marginBottom: 10 }}>
+                    Teacher notes
+                  </div>
+                  <pre style={{ whiteSpace: "pre-wrap", margin: 0, opacity: 0.95 }}>
+                    {result.teacher_notes_md}
+                  </pre>
+                </div>
+
+                <div
+                  style={{
+                    border: "1px solid #2b2b2b",
+                    borderRadius: 12,
+                    padding: 12,
+                    background: "#101010",
+                  }}
+                >
+                  <div style={{ fontWeight: 800, marginBottom: 10 }}>
+                    Student notes
+                  </div>
+                  <pre style={{ whiteSpace: "pre-wrap", margin: 0, opacity: 0.95 }}>
+                    {result.student_notes_md}
+                  </pre>
+                </div>
+
+                <div
+                  style={{
+                    border: "1px solid #2b2b2b",
+                    borderRadius: 12,
+                    padding: 12,
+                    background: "#0f0f0f",
+                    opacity: 0.9,
+                  }}
+                >
+                  <div style={{ fontWeight: 800, marginBottom: 10 }}>Metadata</div>
+                  <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+                    {JSON.stringify(result.extracted, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -84,3 +84,16 @@ export function generateTopicNotes(classId, topicId, { duration_minutes, raw_tex
     body: JSON.stringify({ duration_minutes, raw_text }),
   });
 }
+
+export function generateNotesWithFiles(classId, topicId, { duration_minutes, raw_text, files }) {
+  const fd = new FormData();
+  fd.append("duration_minutes", String(duration_minutes ?? 45));
+  fd.append("raw_text", raw_text ?? "");
+  (files || []).forEach((f) => fd.append("files", f));
+
+  return apiFetch(`/classes/${classId}/topics/${topicId}/generate-notes`, {
+    method: "POST",
+    body: fd,
+  });
+}
+

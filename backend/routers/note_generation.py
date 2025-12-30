@@ -1,26 +1,43 @@
-import re
-from typing import List, Set
+import base64
+import os
+from pathlib import Path
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
 from database.database import get_db
 from app.deps.auth import require_teacher
 from models.classes import Class
 from models.topics import Topic
-
-from app.core.openai_client import get_openai_client, get_openai_model
-from app.schemas.note_generation import (
-    GenerateNotesIn,
-    GenerateNotesOut,
-    ContextCheckOut,
-    AutoTagOut,
-)
+from app.core.openai_client import get_openai_client
+from ai.TeacherNotes.note_workflow import run_notes_workflow
+from app.schemas.note_generation import GenerateNotesOut
 
 router = APIRouter()
 
-YEAR_RE = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\b")
-RANGE_RE = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\s*[–-]\s*(1[0-9]{3}|20[0-9]{2})\b")
+# ====== CONFIG ======
+MAX_FILES = 3
+UPLOAD_DIR = Path("uploads")  # uloží se do backend/uploads (spouštíš z backend/)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+DOC_MIME = {
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "application/json",
+    "application/xml",
+    "text/html",
+    "text/csv",
+}
+
+IMAGE_MIME = {
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
+}
+
 
 def _assert_teacher_owns_topic(db: Session, class_id: int, topic_id: int, teacher_id: int) -> tuple[Class, Topic]:
     cls = db.query(Class).filter(Class.id == class_id, Class.teacher_id == teacher_id).first()
@@ -33,226 +50,120 @@ def _assert_teacher_owns_topic(db: Session, class_id: int, topic_id: int, teache
 
     return cls, topic
 
-def _collect_years_from_text(md: str) -> Set[str]:
-    years = set(YEAR_RE.findall(md))
-    for a, b in RANGE_RE.findall(md):
-        years.add(a)
-        years.add(b)
-    return years
 
-def _allowed_years_from_metadata(meta: AutoTagOut) -> Set[str]:
-    years: Set[str] = set()
-    for d in meta.dates:
-        years |= _collect_years_from_text(d.value)
-        if d.context:
-            years |= _collect_years_from_text(d.context)
-    for f in meta.facts:
-        if f.when:
-            years |= _collect_years_from_text(f.when)
-        if f.event:
-            years |= _collect_years_from_text(f.event)
-    return years
+def _safe_filename(name: str) -> str:
+    # jednoduché “očištění”
+    keep = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_."
+    cleaned = "".join(c if c in keep else "_" for c in (name or "file"))
+    return cleaned[:120] or "file"
 
-def _soft_year_warnings(teacher_md: str, student_md: str, extracted: AutoTagOut) -> List[str]:
-    allowed = _allowed_years_from_metadata(extracted)
-    out_years = _collect_years_from_text(teacher_md) | _collect_years_from_text(student_md)
-    extra = sorted([y for y in out_years if y not in allowed])
 
-    if not extra:
-        return []
-    shown = ", ".join(extra[:8])
-    return [f"Pozor: vygenerovaný text obsahuje letopočty ({shown}), které nebyly ve vstupu/metadata. Může jít o halucinaci."]
+def _to_data_url(data: bytes, mime: str) -> str:
+    b64 = base64.b64encode(data).decode("utf-8")
+    return f"data:{mime};base64,{b64}"
+
 
 @router.post("/classes/{class_id}/topics/{topic_id}/generate-notes", response_model=GenerateNotesOut)
-def generate_notes(
+async def generate_notes(
     class_id: int,
     topic_id: int,
-    payload: GenerateNotesIn,
+    duration_minutes: int = Form(45),
+    raw_text: str = Form(""),
+    files: Optional[List[UploadFile]] = File(None),
     db: Session = Depends(get_db),
     user=Depends(require_teacher),
 ):
     cls, topic = _assert_teacher_owns_topic(db, class_id, topic_id, user.id)
 
-    if not payload.raw_text.strip():
-        raise HTTPException(status_code=400, detail="raw_text is empty")
+    files = files or []
+
+    if not raw_text.strip() and len(files) == 0:
+        raise HTTPException(status_code=400, detail="Zadej text nebo nahraj soubor.")
+
+    if len(files) > MAX_FILES:
+        raise HTTPException(status_code=400, detail=f"Maximální počet souborů je {MAX_FILES}.")
 
     client = get_openai_client()
-    model = get_openai_model()
+
+    # Rozdělíme na DOC vs IMAGE
+    openai_file_ids: List[str] = []       # pro PDF/TXT/MD... (input_file)
+    image_data_urls: List[str] = []       # pro JPG/PNG/WEBP... (input_image)
+
+    saved_files_meta: List[dict] = []     # jen pro info/debug
+
+    for f in files:
+        mime = (f.content_type or "").lower()
+        filename = _safe_filename(f.filename or "file")
+
+        data = await f.read()
+
+        # 1) Uložit lokálně (jak chceš)
+        # vytvoříme unikátní název
+        out_path = UPLOAD_DIR / f"{user.id}_{class_id}_{topic_id}_{filename}"
+        # pokud existuje, přidáme suffix
+        i = 1
+        while out_path.exists():
+            stem = out_path.stem
+            suffix = out_path.suffix
+            out_path = UPLOAD_DIR / f"{stem}_{i}{suffix}"
+            i += 1
+
+        out_path.write_bytes(data)
+        saved_files_meta.append({"name": filename, "mime": mime, "path": str(out_path)})
+
+        # 2) Zpracování pro AI
+        if mime in IMAGE_MIME or filename.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+            # obrázky NEPOSÍLEJ jako input_file → pošli jako input_image (data URL)
+            # (pozor: base64 nafoukne velikost – max 3 soubory je OK)
+            if mime == "image/jpg":
+                mime = "image/jpeg"
+            image_data_urls.append(_to_data_url(data, mime or "image/jpeg"))
+
+        else:
+            # dokumenty posíláme přes OpenAI Files (podporované typy typu PDF/TXT/MD)
+            # Pokud mime není v DOC_MIME, pořád to může být pdf bez content-type atd.
+            # necháme projít, ale bude-li to nepodporované, OpenAI to vrátí jako error.
+            uploaded = client.files.create(
+                file=(filename, data, mime or "application/octet-stream"),
+                purpose="user_data",
+            )
+            openai_file_ids.append(uploaded.id)
+
+    # Zavoláme workflow
+    rejected, reason, extracted, warnings, teacher_md, student_md = run_notes_workflow(
+        client,
+        subject=cls.subject,
+        grade=cls.grade,
+        chapter_title=topic.title,
+        duration_minutes=duration_minutes,
+        raw_text=raw_text,
+        file_ids=openai_file_ids,
+        image_data_urls=image_data_urls,
+    )
 
     meta = {
         "subject": cls.subject,
         "grade": cls.grade,
         "chapter_title": topic.title,
-        "duration_minutes": payload.duration_minutes,
+        "duration_minutes": duration_minutes,
         "language": "cs",
+        "file_count": len(files),
+        "doc_count": len(openai_file_ids),
+        "image_count": len(image_data_urls),
+        # volitelně: ať v UI vidíš co bylo přiloženo
+        "attachments": [{"name": x["name"], "mime": x["mime"]} for x in saved_files_meta],
     }
 
-    # -------------------------
-    # 1) KONTROLA KONTEXTU (GATE)
-    # -------------------------
-    context_system = (
-        "Jsi kontrolor. Zkontroluj, zda text odpovídá předmětu a tématu. "
-        "Pokud neodpovídá, nastav rejected=true a napiš krátký důvod do reject_reason. "
-        "Pokud odpovídá, rejected=false a reject_reason nech prázdné. "
-        "Nevymýšlej obsah. Vrať pouze JSON podle schématu."
-    )
-    context_user = f"""
-PŘEDMĚT: {cls.subject}
-TÉMA/KAPITOLA: {topic.title}
-
-TEXT UČITELE:
-{payload.raw_text}
-""".strip()
-
-    context = client.responses.parse(
-        model=model,
-        input=[
-            {"role": "system", "content": context_system},
-            {"role": "user", "content": context_user},
-        ],
-        text_format=ContextCheckOut,
-    ).output_parsed
-
-    if context.rejected:
-        # STOP – šetříme peníze
+    if rejected:
         return GenerateNotesOut(
             meta=meta,
             rejected=True,
-            reject_reason=context.reject_reason or "Text neodpovídá tématu/předmětu.",
+            reject_reason=reason,
             extracted=None,
             warnings=[],
             teacher_notes_md="",
             student_notes_md="",
         )
-
-    # -------------------------
-    # 2) AUTO_TAG_METADATA (JSON)
-    # -------------------------
-    autotag_system = (
-        "Vrať POUZE JSON dle schématu. "
-        "EXTRAHUJ pouze to, co je v textu EXPLICITNĚ uvedené. "
-        "Nedomýšlej historická fakta. "
-        "Letopočty/intervaly piš přesně tak, jak jsou v textu. "
-        "keywords: 6–12 hesel."
-    )
-
-    autotag_user = f"""
-Klasifikuj:
-- subject: {cls.subject}
-- grade: {cls.grade}
-- chapter_title: {topic.title}
-
-Z TEXTU vytáhni:
-- content_type ∈ {{ "theory", "example", "exercise", "definition" }}
-- keywords (6–12 hesel z textu)
-- dates (roky/intervaly přesně z textu)
-- facts (spoj událost + jméno + datum, jen když je to v textu)
-- missing (co v textu chybí / je nejasné)
-
-TEXT:
-{payload.raw_text}
-""".strip()
-
-    extracted = client.responses.parse(
-        model=model,
-        input=[
-            {"role": "system", "content": autotag_system},
-            {"role": "user", "content": autotag_user},
-        ],
-        text_format=AutoTagOut,
-    ).output_parsed
-
-    # -------------------------
-    # 3) TEACHER NOTES (MD)
-    # -------------------------
-    teacher_system = (
-        "Jsi didaktický asistent pro základní školu. "
-        "Tvým úkolem je vytvořit plán hodiny a teoretickou přípravu pro učitele. "
-        "KRITICKÉ: Používej pouze fakta/roky z EXTRACTED METADATA. "
-        "Nepřidávej nové letopočty. "
-        "Piš česky, přehledně, v markdown."
-    )
-
-    teacher_user = f"""
-META:
-- PŘEDMĚT: {cls.subject}
-- ROČNÍK: {cls.grade}
-- TÉMA/KAPITOLA: {topic.title}
-- DÉLKA: {payload.duration_minutes} minut
-
-EXTRACTED METADATA (z toho čerpej klíčová slova + fakta + roky):
-{extracted.model_dump()}
-
-TEXT UČITELE:
-{payload.raw_text}
-
-VRAŤ PŘESNĚ V TOMTO FORMÁTU (beze změn nadpisů):
-
-# Příprava hodiny: {cls.grade}. třída – {topic.title} ({payload.duration_minutes} minut)
-
-## Časový plán
-- 0–X min: Úvod (cíl hodiny, aktivace předchozích znalostí) — [konkrétní body]
-- X–Y min: [název bloku] — [co učitel dělá/říká + klíčová fakta z textu]
-- … (další bloky tak, aby součet minut dal {payload.duration_minutes})
-- [poslední interval]: Uzavření hodiny (shrnutí, exit ticket)
-
-## 3 doporučené aktivity pro žáky
-1) **Název** — *Cíl:* … — *Instrukce:* … — *Pomůcky:* … — *Ověření porozumění:* …
-2) **Název** — *Cíl:* … — *Instrukce:* … — *Pomůcky:* … — *Ověření porozumění:* …
-3) **Název** — *Cíl:* … — *Instrukce:* … — *Pomůcky:* … — *Ověření porozumění:* …
-
-## Klíčová slova
-- [vyjmenuj 6–12 klíčových slov]
-""".strip()
-
-    teacher_md = client.responses.create(
-        model=model,
-        input=[
-            {"role": "system", "content": teacher_system},
-            {"role": "user", "content": teacher_user},
-        ],
-    ).output_text.strip()
-
-    # -------------------------
-    # 4) STUDENT NOTES (MD)
-    # -------------------------
-    student_system = (
-        "Jsi nejpilnější žák a nejlepší zapisovatel. "
-        "Vytvoř kvalitní zápis pro spolužáka ze základní školy. "
-        "Vynech aktivity a shrnutí s opakováním. "
-        "KRITICKÉ: Nepřidávej nové letopočty; použij jen ty z EXTRACTED METADATA. "
-        "Piš česky a v markdown."
-    )
-
-    student_user = f"""
-ROČNÍK: {cls.grade}
-TÉMA: {topic.title}
-
-EXTRACTED METADATA (fakta/roky, která smíš použít):
-{extracted.model_dump()}
-
-TEXT UČITELE:
-{payload.raw_text}
-
-VÝSTUP (Markdown):
-- Nadpis
-- Stručné odrážky (hlavní body)
-- Definice pojmů (pokud jsou v textu)
-- 5 kontrolních otázek na závěr
-""".strip()
-
-    student_md = client.responses.create(
-        model=model,
-        input=[
-            {"role": "system", "content": student_system},
-            {"role": "user", "content": student_user},
-        ],
-    ).output_text.strip()
-
-    warnings: List[str] = []
-    if len(extracted.dates) == 0:
-        warnings.append("V textu nebyly nalezeny žádné explicitní letopočty/intervaly. Poznámky budou bez přesných dat.")
-    warnings.extend(_soft_year_warnings(teacher_md, student_md, extracted))
 
     return GenerateNotesOut(
         meta=meta,
