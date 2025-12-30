@@ -34,7 +34,7 @@ def _build_multimodal_content(
     """
     OpenAI Responses API content parts:
       - input_text
-      - input_file  (PDF/TXT/MD/...)
+      - input_file  (jen pro podporované "textové" docs)
       - input_image (images as data URL)
     """
     parts: List[Dict[str, Any]] = [{"type": "input_text", "text": text}]
@@ -88,7 +88,7 @@ def run_notes_workflow(
     chapter_title: str,
     duration_minutes: int,
     raw_text: str,
-    file_ids: Optional[List[str]] = None,         # PDF/TXT/MD... OpenAI file_id
+    file_ids: Optional[List[str]] = None,         # pro input_file (teď typicky prázdné)
     image_data_urls: Optional[List[str]] = None,  # images as data URLs
 ) -> Tuple[bool, str, Optional[AutoTagOut], List[str], str, str]:
     """

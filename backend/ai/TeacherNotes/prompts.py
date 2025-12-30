@@ -10,12 +10,12 @@ def context_gate_system() -> str:
 
 def context_gate_user(subject: str, chapter_title: str, raw_text: str) -> str:
     return f"""
-PŘEDMĚT: {subject}
-TÉMA/KAPITOLA: {chapter_title}
+    PŘEDMĚT: {subject}
+    TÉMA/KAPITOLA: {chapter_title}
 
-TEXT UČITELE:
-{raw_text}
-""".strip()
+    TEXT UČITELE:
+    {raw_text}
+    """.strip()
 
 
 def autotag_system() -> str:
@@ -121,7 +121,7 @@ def student_notes_system() -> str:
         "Vytvoř přehledný zápis pro spolužáka ze základní školy. "
         "Vynech aktivity. "
         "Max cca 25 řádků. "
-        "Nepřidávej nové letopočty – použij jen ty z EXTRACTED METADATA. "
+        "Nepřidávej nové informace – použij jen ty z EXTRACTED METADATA. "
         "Piš česky v markdown."
     )
 
@@ -133,18 +133,104 @@ def student_notes_user(
     raw_text: str,
 ) -> str:
     return f"""
-ROČNÍK: {grade}
-TÉMA: {chapter_title}
+    ROČNÍK: {grade}
+    TÉMA: {chapter_title}
 
-EXTRACTED METADATA:
-{extracted_dump}
+    EXTRACTED METADATA:
+    {extracted_dump}
 
-TEXT UČITELE:
-{raw_text}
+    TEXT UČITELE:
+    {raw_text}
 
-VÝSTUP:
-- Nadpis
-- Odrážky (hlavní body)
-- Definice pojmů
-- 5 kontrolních otázek
-""".strip()
+    VÝSTUP:
+    - Nadpis
+    - Odrážky (hlavní body)
+    - Definice pojmů
+    - 5 kontrolních otázek
+    """.strip()
+
+
+def teacher_regen_system() -> str:
+    return (
+        "Jsi didaktický asistent. Přepíšeš učitelské poznámky podle uživatelské poznámky. "
+        "KRITICKÉ: Nehalucinuj. Používej pouze fakta/letopočty z EXTRACTED METADATA. "
+        "Zachovej stejnou strukturu a nadpisy jako původní učitelské poznámky. "
+        "Piš česky, v markdown."
+    )
+
+
+def teacher_regen_user(
+    *,
+    subject: str,
+    grade: int,
+    chapter_title: str,
+    duration_minutes: int,
+    extracted_dump: dict,
+    raw_text: str,
+    current_md: str,
+    user_note: str,
+) -> str:
+    return f"""
+    META:
+    - PŘEDMĚT: {subject}
+    - ROČNÍK: {grade}
+    - TÉMA: {chapter_title}
+    - DÉLKA: {duration_minutes} minut
+
+    EXTRACTED METADATA (jediný zdroj fakt/letopočtů):
+    {extracted_dump}
+
+    PŮVODNÍ TEXT UČITELE:
+    {raw_text}
+
+    AKTUÁLNÍ UČITELSKÉ POZNÁMKY (tohle uprav):
+    {current_md}
+
+    UŽIVATELSKÁ POZNÁMKA (pokyny k úpravě):
+    {user_note}
+
+    POŽADAVKY:
+    - Vrať kompletní přepsaný text.
+    - Zachovej markdown strukturu a stejné nadpisy.
+    - Pokud uživatelská poznámka žádá něco mimo fakta (např. nové roky), ignoruj to a drž se metadata.
+    """.strip()
+
+
+def student_regen_system() -> str:
+    return (
+        "Jsi nejlepší zapisovatel. Přepíšeš studentské poznámky podle uživatelské poznámky. "
+        "KRITICKÉ: Nehalucinuj. Nepřidávej nové letopočty mimo EXTRACTED METADATA. "
+        "Piš česky, v markdown."
+    )
+
+
+def student_regen_user(
+    *,
+    grade: int,
+    chapter_title: str,
+    extracted_dump: dict,
+    raw_text: str,
+    current_md: str,
+    user_note: str,
+) -> str:
+    return f"""
+    ROČNÍK: {grade}
+    TÉMA: {chapter_title}
+
+    EXTRACTED METADATA (jediný zdroj fakt/letopočtů):
+    {extracted_dump}
+
+    PŮVODNÍ TEXT UČITELE:
+    {raw_text}
+
+    AKTUÁLNÍ STUDENTSKÉ POZNÁMKY (tohle uprav):
+    {current_md}
+
+    UŽIVATELSKÁ POZNÁMKA:
+    {user_note}
+
+    POŽADAVKY:
+    - Vrať kompletní přepsaný text.
+    - Vynech aktivity (studentské poznámky).
+    - Max cca 25 řádků (pokud uživatel nechce jinak).
+    """.strip()

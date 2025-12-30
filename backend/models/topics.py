@@ -11,6 +11,9 @@ class Topic(Base):
     title = Column(String(100), nullable=False)
     active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
+    teacher_notes_md = Column(Text, nullable=True)
+    student_notes_md = Column(Text, nullable=True)
+
 
 
     # vztahy

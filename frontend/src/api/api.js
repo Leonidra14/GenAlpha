@@ -97,3 +97,10 @@ export function generateNotesWithFiles(classId, topicId, { duration_minutes, raw
   });
 }
 
+export function regenerateNotes(classId, topicId, payload) {
+  return apiFetch(`/classes/${classId}/topics/${topicId}/regenerate-notes`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+

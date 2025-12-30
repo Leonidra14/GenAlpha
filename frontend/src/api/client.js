@@ -9,7 +9,7 @@ export async function apiFetch(path, options = {}) {
 
   const isFormData = options.body instanceof FormData;
 
-  // JSON Content-Type nastavuj jen když to není FormData
+  // Content-Type nastavuj jen pro JSON (u FormData to musí nechat prohlížeč!)
   if (!isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -29,8 +29,16 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!res.ok) {
-    const msg = data?.detail || data?.message || `HTTP ${res.status}`;
-    throw new Error(msg);
+    // backend může vrátit detail jako string, nebo jako objekt { code, message }
+    let detail = data?.detail ?? data?.message ?? `HTTP ${res.status}`;
+
+    if (typeof detail === "object" && detail?.message) {
+      const err = new Error(detail.message);
+      err.code = detail.code; // aby UI mohlo poznat file_error
+      throw err;
+    }
+
+    throw new Error(detail);
   }
 
   return data;
