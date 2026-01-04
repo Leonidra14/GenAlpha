@@ -14,8 +14,6 @@ class Topic(Base):
     teacher_notes_md = Column(Text, nullable=True)
     student_notes_md = Column(Text, nullable=True)
 
-
-
     # vztahy
     class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
     class_ = relationship("Class", back_populates="topics")
