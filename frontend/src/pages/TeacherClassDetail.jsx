@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import ImportTopicModal from "../components/ImportTopicModal";
 
 import {
   getClassDetail,
@@ -11,6 +12,25 @@ import {
 
 import ClassSettingsModal from "../components/ClassSettingsModal";
 import ClassStudentsModal from "../components/ClassStudentsModal";
+
+import "./TeacherClassDetail.css";
+
+// decor
+import clouds from "../assets/clouds.png";
+import labs from "../assets/lab_books.png";
+import logo from "../assets/logo.png";
+import star from "../assets/star.png";
+import flight from "../assets/flight.png";
+
+/* deterministic random */
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 export default function TeacherClassDetail() {
   const { classId } = useParams();
@@ -24,6 +44,7 @@ export default function TeacherClassDetail() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [studentsOpen, setStudentsOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   function openTopic(topicId) {
     navigate(`/teacher/classes/${classId}/topics/${topicId}`);
@@ -86,8 +107,72 @@ export default function TeacherClassDetail() {
     }
   }
 
-  if (loading) return <div>Načítám…</div>;
-  if (error) return <div style={{ color: "red" }}>{error}</div>;
+  const logout = () => {
+    localStorage.removeItem("access_token");
+    window.location.href = "/";
+  };
+
+  /* ⭐✈️ random dekorace */
+  const randomDecos = useMemo(() => {
+    const rand = mulberry32(123);
+
+    const starsCount = 18 + Math.floor(rand() * 10);
+    const flightsCount = 6 + Math.floor(rand() * 4);
+
+    const items = [];
+    const add = (count, type) => {
+      for (let i = 0; i < count; i++) {
+        const left = `${Math.round(rand() * 100)}%`;
+        const top = `${Math.round(rand() * 85)}%`;
+
+        const scale = type === "star" ? 0.6 + rand() * 0.9 : 0.75 + rand() * 0.7;
+        const rotate = (rand() * 30 - 15).toFixed(1);
+        const opacity = (0.18 + rand() * 0.32).toFixed(2);
+
+        items.push({
+          id: `${type}-${i}`,
+          type,
+          src: type === "star" ? star : flight,
+          style: {
+            left,
+            top,
+            opacity,
+            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotate}deg)`,
+          },
+        });
+      }
+    };
+
+    add(starsCount, "star");
+    add(flightsCount, "flight");
+    return items;
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="tcdPage">
+        <img className="tcdDec tcdClouds" src={clouds} alt="" aria-hidden="true" />
+        <div className="tcdWrap">
+          <div className="tcdLoading">Načítám…</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="tcdPage">
+        <img className="tcdDec tcdClouds" src={clouds} alt="" aria-hidden="true" />
+        <div className="tcdWrap">
+          <div className="tcdError">{error}</div>
+          <button className="tcdBtn ghost" onClick={() => navigate("/teacher")}>
+            ← Zpět
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!cls) return null;
 
   const title =
@@ -97,156 +182,197 @@ export default function TeacherClassDetail() {
       ? `${cls.grade}. třída – ${cls.subject}`
       : `Třída – ${cls.subject}`;
 
-  const btnStyle = {
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: "1px solid #2b2b2b",
-    background: "#1b1b1b",
-    color: "#fff",
-    cursor: "pointer",
-  };
-
-  const topicStyle = {
-    padding: 10,
-    borderRadius: 10,
-    border: "1px solid #2b2b2b",
-    marginBottom: 8,
-    display: "flex",
-    justifyContent: "space-between",
-    cursor: "pointer",
-  };
+  const activeTopics = topics.filter((t) => t.active);
+  const inactiveTopics = topics.filter((t) => !t.active);
 
   return (
-    <div style={{ maxWidth: 900 }}>
-      {/* HLAVIČKA */}
-      <h1 style={{ marginBottom: 6 }}>{title}</h1>
+    <div className="tcdPage">
+      {/* decor */}
+      <img className="tcdDec tcdClouds" src={clouds} alt="" aria-hidden="true" />
+      {randomDecos.map((d) => (
+        <img
+          key={d.id}
+          className={`tcdDec tcdRand ${d.type === "flight" ? "tcdRandFlight" : "tcdRandStar"}`}
+          src={d.src}
+          alt=""
+          aria-hidden="true"
+          style={d.style}
+        />
+      ))}
+      <img className="tcdDec tcdLabs" src={labs} alt="" aria-hidden="true" />
 
-      {cls.note && cls.note.trim() && (
-        <div style={{ marginBottom: 8, opacity: 0.85 }}>{cls.note}</div>
-      )}
+      <div className="tcdWrap">
+        {/* TOPBAR: logo vlevo, logout úplně vpravo */}
+        <div className="tcdTopbar">
+          <img className="tcdLogo" src={logo} alt="GenAlpha" />
+          <div className="tcdTopActions">
+            <button className="tcdBtn pillDanger" onClick={logout}>
+              ⟶ Odhlásit se
+            </button>
+          </div>
+        </div>
 
-      <div style={{ fontSize: 14, opacity: 0.7 }}>
-        Třída: {cls.grade ?? "—"}
-      </div>
-      <div style={{ fontSize: 14, opacity: 0.7 }}>
-        Předmět: {cls.subject}
-      </div>
+        {/* header info */}
+        <div className="tcdHeader">
+          <div className="tcdHeaderLeft">
+            <h1 className="tcdTitle">{title}</h1>
 
-      {/* ACTION BUTTONS */}
-      <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-        <button style={btnStyle} onClick={() => setSettingsOpen(true)}>
-          ⚙️ Nastavení
-        </button>
-
-        <button style={btnStyle} onClick={() => setStudentsOpen(true)}>
-          👩‍🎓 Studenti ({cls.num_students ?? 0})
-        </button>
-
-        <button style={btnStyle} onClick={() => navigate("/teacher")}>
-          ← Zpět
-        </button>
-      </div>
-
-      {/* TOPICS */}
-      <div style={{ marginTop: 30 }}>
-        <h2>Kapitoly</h2>
-
-        {/* ADD TOPIC */}
-        <form onSubmit={onAddTopic} style={{ marginBottom: 16 }}>
-          <input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            placeholder="Název nové kapitoly"
-            style={{
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid #2b2b2b",
-              background: "#0f0f0f",
-              color: "#fff",
-              width: 300,
-              marginRight: 8,
-            }}
-          />
-          <button style={btnStyle} type="submit">
-            ➕ Přidat
-          </button>
-        </form>
-
-        {/* ACTIVE */}
-        <h3>Aktivní</h3>
-        {topics.filter((t) => t.active).length === 0 && (
-          <div style={{ opacity: 0.6 }}>Žádné aktivní kapitoly</div>
-        )}
-
-        {topics
-          .filter((t) => t.active)
-          .map((t) => (
+            {/* ✅ stejný řádek: Studenti + Nastavení + Zpět */}
             <div
-              key={t.id}
-              style={topicStyle}
-              onClick={() => openTopic(t.id)}
-            >
-              <div style={{ fontWeight: 700 }}>{t.title}</div>
-
-              <div
-                style={{ display: "flex", gap: 8 }}
-                onClick={(e) => e.stopPropagation()}
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  width: "100%",
+                }}
               >
-                <button style={btnStyle} onClick={() => onToggleTopic(t)}>
-                  Deaktivovat
-                </button>
-                <button style={btnStyle} onClick={() => onDeleteTopic(t)}>
-                  Smazat
+                {/* levá skupina */}
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                  <button className="tcdBtn primarySoft" onClick={() => setStudentsOpen(true)}>
+                    👩‍🎓 Studenti ({cls.num_students ?? 0})
+                  </button>
+
+                  <button className="tcdBtn ghost" onClick={() => setSettingsOpen(true)}>
+                    ⚙️ Nastavení
+                  </button>
+                </div>
+
+                {/* pravá strana */}
+                <button className="tcdBtn ghost" onClick={() => navigate("/teacher")}>
+                  ← Zpět
                 </button>
               </div>
+
+
+            {cls.note && cls.note.trim() && <div className="tcdSubtitle">{cls.note}</div>}
+
+            <div className="tcdMeta">
+              <div>Třída: {cls.grade ?? "—"}</div>
+              <div>Předmět: {cls.subject}</div>
             </div>
-          ))}
+          </div>
+        </div>
 
-        {/* INACTIVE */}
-        <h3 style={{ marginTop: 20 }}>Neaktivní</h3>
-        {topics.filter((t) => !t.active).length === 0 && (
-          <div style={{ opacity: 0.6 }}>Žádné neaktivní kapitoly</div>
-        )}
+        {/* card: kapitoly */}
+        <div className="tcdCard">
+          <div className="tcdCardHeader">
+            <div className="tcdCardTitle">Kapitoly</div>
 
-        {topics
-          .filter((t) => !t.active)
-          .map((t) => (
-            <div
-              key={t.id}
-              style={{ ...topicStyle, opacity: 0.7 }}
-              onClick={() => openTopic(t.id)}
-            >
-              <div style={{ fontWeight: 700 }}>{t.title}</div>
-
-              <div
-                style={{ display: "flex", gap: 8 }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button style={btnStyle} onClick={() => onToggleTopic(t)}>
-                  Aktivovat
-                </button>
-                <button style={btnStyle} onClick={() => onDeleteTopic(t)}>
-                  Smazat
-                </button>
+            <form className="tcdAddForm" onSubmit={onAddTopic}>
+              <div className="tcdField">
+                <input
+                  className="tcdInput"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  placeholder="Název nové kapitoly"
+                />
               </div>
-            </div>
-          ))}
+
+              <button className="tcdBtn primary" type="submit">
+                ＋ Vytvořit
+              </button>
+
+              <button
+                type="button"
+                className="tcdBtn"
+                onClick={() => setImportOpen(true)}
+              >
+                ⬆ Nahrát
+              </button>
+            </form>
+          </div>
+
+          {/* Aktivní */}
+          <div className="tcdSection">
+            <div className="tcdSectionTitle">Aktivní</div>
+
+            {activeTopics.length === 0 && <div className="tcdEmpty">Žádné aktivní kapitoly</div>}
+
+            {activeTopics.map((t) => (
+              <div key={t.id} className="tcdTopic" onClick={() => openTopic(t.id)}>
+                <div className="tcdTopicLeft">
+                  <div className="tcdBulb" aria-hidden="true">
+                    💡
+                  </div>
+                  <div className="tcdTopicTitle">{t.title}</div>
+                </div>
+
+                <div className="tcdTopicActions" onClick={(e) => e.stopPropagation()}>
+                  <button className="tcdBtn pill" type="button" onClick={() => onToggleTopic(t)}>
+                    Deaktivovat
+                  </button>
+                  <button
+                    className="tcdBtn pillDanger"
+                    type="button"
+                    onClick={() => onDeleteTopic(t)}
+                  >
+                    Smazat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Neaktivní */}
+          <div className="tcdSection">
+            <div className="tcdSectionTitle muted">Neaktivní</div>
+
+            {inactiveTopics.length === 0 && <div className="tcdEmpty">Žádné neaktivní kapitoly</div>}
+
+            {inactiveTopics.map((t) => (
+              <div
+                key={t.id}
+                className="tcdTopic tcdTopicInactive"
+                onClick={() => openTopic(t.id)}
+              >
+                <div className="tcdTopicLeft">
+                  <div className="tcdBulb" aria-hidden="true">
+                    💡
+                  </div>
+                  <div className="tcdTopicTitle">{t.title}</div>
+                </div>
+
+                <div className="tcdTopicActions" onClick={(e) => e.stopPropagation()}>
+                  <button className="tcdBtn pill" type="button" onClick={() => onToggleTopic(t)}>
+                    Aktivovat
+                  </button>
+                  <button
+                    className="tcdBtn pillDanger"
+                    type="button"
+                    onClick={() => onDeleteTopic(t)}
+                  >
+                    Smazat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* modals */}
+        <ClassSettingsModal
+          open={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          classId={classId}
+          onSaved={() => load()}
+        />
+
+        <ClassStudentsModal
+          open={studentsOpen}
+          onClose={() => setStudentsOpen(false)}
+          classId={classId}
+          onChanged={() => load()}
+        />
+
+        <ImportTopicModal
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          targetClassId={classId}
+          onImported={load}
+        />
       </div>
-
-      {/* MODALS */}
-      <ClassSettingsModal
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        classId={classId}
-        onSaved={() => load()}
-      />
-
-      <ClassStudentsModal
-        open={studentsOpen}
-        onClose={() => setStudentsOpen(false)}
-        classId={classId}
-        onChanged={() => load()}
-      />
     </div>
   );
 }

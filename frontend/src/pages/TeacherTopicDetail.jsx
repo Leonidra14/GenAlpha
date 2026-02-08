@@ -1,36 +1,118 @@
-import React, { useMemo, useRef, useState } from "react";
+// src/pages/TeacherTopicDetail.jsx
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { generateNotesWithFiles, regenerateNotes } from "../api/api";
+import {
+  generateNotesWithFiles,
+  regenerateNotes,
+  saveFinalTeacherNotes,
+  saveFinalStudentNotes,
+  getFinalNotes,
+  getClassDetail,
+  getClassTopics,
+} from "../api/api";
+
+// ✅ markdown render
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+// reuse stejného designu
+import "./TeacherClassDetail.css";
+
+// decor
+import clouds from "../assets/clouds.png";
+import labs from "../assets/lab_books.png";
+import logo from "../assets/logo.png";
+import star from "../assets/star.png";
+import flight from "../assets/flight.png";
+
+/* deterministic random */
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * 🔧 Fix: LLM někdy vrátí celé poznámky obalené do ``` nebo ```markdown,
+ * pak se to na stránce tváří jako "kód" a rozbije layout.
+ * Tohle odstripuje "outer" code fence (jen pokud obaluje celý text).
+ */
+function stripOuterCodeFence(md) {
+  const s = (md ?? "").trim();
+  if (!s.startsWith("```")) return md ?? "";
+  const lines = s.split("\n");
+  if (lines.length < 3) return md ?? "";
+
+  const first = lines[0].trim(); // ``` nebo ```markdown
+  const last = lines[lines.length - 1].trim();
+  if (!first.startsWith("```") || last !== "```") return md ?? "";
+
+  // odstraň první a poslední řádek
+  const inner = lines.slice(1, -1).join("\n").trim();
+  return inner;
+}
+
+function normalizeMd(md) {
+  return stripOuterCodeFence(md ?? "").trim();
+}
 
 export default function TeacherTopicDetail() {
   const { classId, topicId } = useParams();
   const navigate = useNavigate();
 
+  // tabs
+  const [tab, setTab] = useState("build"); // build | student | teacher | quiz
+
+  // build inputs
   const [duration, setDuration] = useState(45);
   const [rawText, setRawText] = useState("");
   const [files, setFiles] = useState([]);
+  const fileInputRef = useRef(null);
 
+  // state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-
-  // aktuální zobrazený výsledek
   const [result, setResult] = useState(null);
 
-  // historie verzí (bez DB)
-  // { id, createdAt, label, resultSnapshot }
-  const [history, setHistory] = useState([]);
-  const [activeVersionId, setActiveVersionId] = useState(null);
+  //header info
+  const [classTitle, setClassTitle] = useState("");
+  const [topicTitle, setTopicTitle] = useState("");
 
-  // finální verze (jen UI)
-  const [finalVersionId, setFinalVersionId] = useState(null);
+
+  // historie verzí (lokálně)
+  const [history, setHistory] = useState([]);
+
+  // aktivní verze
+  const [activeTeacherVersionId, setActiveTeacherVersionId] = useState(null);
+  const [activeStudentVersionId, setActiveStudentVersionId] = useState(null);
+
+  // která verze je uložená v DB
+  const [dbTeacherVersionId, setDbTeacherVersionId] = useState(null);
+  const [dbStudentVersionId, setDbStudentVersionId] = useState(null);
 
   // regen
   const [regenTarget, setRegenTarget] = useState("teacher"); // teacher|student|both
   const [userNote, setUserNote] = useState("");
   const [regenLoading, setRegenLoading] = useState(false);
 
-  // aby se verze hezky číslovaly
+  // save loading
+  const [saveFinalLoading, setSaveFinalLoading] = useState(false);
+
+  // edit mode
+  const [isEditingTeacher, setIsEditingTeacher] = useState(false);
+  const [isEditingStudent, setIsEditingStudent] = useState(false);
+  const [teacherDraft, setTeacherDraft] = useState("");
+  const [studentDraft, setStudentDraft] = useState("");
+
+  // metadata collapsible
+  const [showMeta, setShowMeta] = useState(false);
+
+  // counters
   const versionCounterRef = useRef(0);
+  const autoSavedRef = useRef(false);
 
   const allowed = useMemo(
     () =>
@@ -64,7 +146,6 @@ export default function TeacherTopicDetail() {
 
   function onFilesChange(e) {
     setError("");
-
     const selected = Array.from(e.target.files || []);
 
     if (selected.length > 3) {
@@ -99,62 +180,7 @@ export default function TeacherTopicDetail() {
   function clearFiles() {
     setError("");
     setFiles([]);
-  }
-
-  // --- VERSIONING HELPERS ---
-  function _snapshotResult(res, label) {
-    // deep copy, aby se to neměnilo referencí
-    const snapshot = JSON.parse(JSON.stringify(res));
-
-    versionCounterRef.current += 1;
-    const id = `${Date.now()}_${versionCounterRef.current}`;
-
-    const item = {
-      id,
-      createdAt: new Date().toISOString(),
-      label,
-      resultSnapshot: snapshot,
-    };
-
-    setHistory((prev) => [item, ...prev]);
-    setActiveVersionId(id);
-
-    // pokud zatím nemáme finální verzi, nastavíme první jako "draft finální"
-    // (můžeš klidně smazat, pokud to nechceš)
-    if (!finalVersionId) {
-      setFinalVersionId(id);
-    }
-
-    return id;
-  }
-
-  function restoreVersion(id) {
-    const item = history.find((h) => h.id === id);
-    if (!item) return;
-    setResult(item.resultSnapshot);
-    setActiveVersionId(item.id);
-    setError("");
-  }
-
-  function deleteVersion(id) {
-    setHistory((prev) => prev.filter((h) => h.id !== id));
-
-    if (activeVersionId === id) setActiveVersionId(null);
-    if (finalVersionId === id) setFinalVersionId(null);
-  }
-
-  function clearHistory() {
-    setHistory([]);
-    setActiveVersionId(null);
-    setFinalVersionId(null);
-  }
-
-  function setAsFinal(id) {
-    setFinalVersionId(id);
-  }
-
-  function clearFinal() {
-    setFinalVersionId(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function formatTime(iso) {
@@ -166,10 +192,186 @@ export default function TeacherTopicDetail() {
     }
   }
 
-  const finalItem = useMemo(
-    () => history.find((h) => h.id === finalVersionId) || null,
-    [history, finalVersionId]
-  );
+  // --- VERSIONING ---
+  function _insertHistorySnapshot({ snapshot, label, createdAt, forceId }) {
+    const id = forceId || `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const item = {
+      id,
+      createdAt: createdAt || new Date().toISOString(),
+      label,
+      resultSnapshot: JSON.parse(JSON.stringify(snapshot)),
+    };
+
+    setHistory((prev) => {
+      const exists = prev.some((h) => h.id === id);
+      if (exists) return prev.map((h) => (h.id === id ? item : h));
+      return [item, ...prev];
+    });
+
+    return id;
+  }
+
+  function _snapshotResult(res, label) {
+    versionCounterRef.current += 1;
+    const id = `${Date.now()}_${versionCounterRef.current}`;
+
+    const item = {
+      id,
+      createdAt: new Date().toISOString(),
+      label,
+      resultSnapshot: JSON.parse(JSON.stringify(res)),
+    };
+
+    setHistory((prev) => [item, ...prev]);
+    return id;
+  }
+
+  function getById(id) {
+    return history.find((h) => h.id === id) || null;
+  }
+
+  function getVersionNumber(id) {
+    if (!id) return null;
+    const idx = history.findIndex((h) => h.id === id);
+    if (idx === -1) return null;
+    return history.length - idx; // nejnovější má nejvyšší číslo
+  }
+
+  const teacherView = useMemo(() => {
+    const item = getById(activeTeacherVersionId);
+    return item?.resultSnapshot?.teacher_notes_md || "";
+  }, [history, activeTeacherVersionId]);
+
+  const studentView = useMemo(() => {
+    const item = getById(activeStudentVersionId);
+    return item?.resultSnapshot?.student_notes_md || "";
+  }, [history, activeStudentVersionId]);
+
+  const extractedView = useMemo(() => {
+    if (result?.extracted) return result.extracted;
+    const item = getById(activeTeacherVersionId);
+    return item?.resultSnapshot?.extracted || null;
+  }, [result, history, activeTeacherVersionId]);
+
+  useEffect(() => {
+  let cancelled = false;
+
+  async function loadHeader() {
+    try {
+      const [cls, topics] = await Promise.all([
+        getClassDetail(classId),
+        getClassTopics(classId),
+      ]);
+      if (cancelled) return;
+
+      const clsLabel =
+        (cls?.custom_name || "").trim() ||
+        (cls?.grade != null && cls?.subject ? `${cls.grade}. třída – ${cls.subject}` : "") ||
+        cls?.subject ||
+        `Třída ${classId}`;
+
+      const t = (topics || []).find((x) => String(x.id) === String(topicId));
+      const topicLabel = (t?.title || "").trim() || `Kapitola ${topicId}`;
+
+      setClassTitle(clsLabel);
+      setTopicTitle(topicLabel);
+    } catch {
+      setClassTitle(`Třída ${classId}`);
+      setTopicTitle(`Kapitola ${topicId}`);
+    }
+  }
+
+  loadHeader();
+  return () => {
+    cancelled = true;
+  };
+}, [classId, topicId]);
+
+
+  // ✅ načti DB verzi po otevření stránky
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadDb() {
+      setError("");
+      try {
+        const db = await getFinalNotes(classId, topicId);
+        if (cancelled) return;
+
+        const hasTeacher = !!(db?.teacher_notes_md || "").trim();
+        const hasStudent = !!(db?.student_notes_md || "").trim();
+        if (!hasTeacher && !hasStudent) return;
+
+        const snapshot = {
+          rejected: false,
+          extracted: db?.extracted || null,
+          teacher_notes_md: normalizeMd(db?.teacher_notes_md || ""),
+          student_notes_md: normalizeMd(db?.student_notes_md || ""),
+        };
+
+        const id = _insertHistorySnapshot({
+          snapshot,
+          label: "Z DB (finální)",
+          createdAt: db?.updated_at || new Date().toISOString(),
+          forceId: "db_final",
+        });
+
+        if (hasTeacher) {
+          setActiveTeacherVersionId((prev) => prev || id);
+          setTeacherDraft(normalizeMd(db.teacher_notes_md || ""));
+          setDbTeacherVersionId(id);
+        }
+        if (hasStudent) {
+          setActiveStudentVersionId((prev) => prev || id);
+          setStudentDraft(normalizeMd(db.student_notes_md || ""));
+          setDbStudentVersionId(id);
+        }
+      } catch (e) {
+        // necháme potichu (endpoint už máš)
+      }
+    }
+
+    loadDb();
+    return () => {
+      cancelled = true;
+    };
+  }, [classId, topicId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // keep drafts synced when switching version/tab
+  useEffect(() => {
+    if (tab === "teacher") {
+      setTeacherDraft(normalizeMd(teacherView || ""));
+      setIsEditingTeacher(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, activeTeacherVersionId, history.length]);
+
+  useEffect(() => {
+    if (tab === "student") {
+      setStudentDraft(normalizeMd(studentView || ""));
+      setIsEditingStudent(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, activeStudentVersionId, history.length]);
+
+  async function autoSaveFirstGenerationToDb(data, createdVersionId) {
+    if (autoSavedRef.current) return;
+    autoSavedRef.current = true;
+
+    try {
+      await Promise.all([
+        saveFinalTeacherNotes(classId, topicId, data?.teacher_notes_md || ""),
+        saveFinalStudentNotes(classId, topicId, data?.student_notes_md || ""),
+      ]);
+
+      // DB teď ukazuje na verzi, kterou jsme právě vytvořili
+      setDbTeacherVersionId(createdVersionId);
+      setDbStudentVersionId(createdVersionId);
+    } catch (e) {
+      autoSavedRef.current = false;
+      throw e;
+    }
+  }
 
   async function onRun() {
     setError("");
@@ -188,13 +390,24 @@ export default function TeacherTopicDetail() {
         files,
       });
 
-      setResult(data);
+      // normalize výstupy
+      const normalized = {
+        ...data,
+        teacher_notes_md: normalizeMd(data?.teacher_notes_md || ""),
+        student_notes_md: normalizeMd(data?.student_notes_md || ""),
+      };
 
-      // ulož do historie jen pokud nebylo rejected
-      if (data && !data.rejected) {
-        const newId = _snapshotResult(data, "Vygenerováno");
-        // aktivní verze nastaví snapshot; výsledek už jsme nastavili
-        setActiveVersionId(newId);
+      setResult(normalized);
+
+      if (normalized && !normalized.rejected) {
+        const id = _snapshotResult(normalized, "Vygenerováno");
+        setActiveTeacherVersionId(id);
+        setActiveStudentVersionId(id);
+
+        setTeacherDraft(normalized.teacher_notes_md || "");
+        setStudentDraft(normalized.student_notes_md || "");
+
+        await autoSaveFirstGenerationToDb(normalized, id);
       }
     } catch (e) {
       const code = e?.code;
@@ -205,19 +418,24 @@ export default function TeacherTopicDetail() {
     }
   }
 
+  // ✅ REGEN: posíláme jen to co je aktuálně otevřené v markdownu + user_note + target
   async function onRegenerate() {
     setError("");
 
-    if (!result || result.rejected) {
-      setError("Nejdřív vygeneruj poznámky.");
-      return;
-    }
     if (!userNote.trim()) {
       setError("Napiš krátkou poznámku pro AI.");
       return;
     }
-    if (!result.extracted) {
-      setError("Chybí metadata (extracted). Zkus spustit workflow znovu.");
+
+    const teacher_md = normalizeMd(teacherDraft || "");
+    const student_md = normalizeMd(studentDraft || "");
+
+    if ((regenTarget === "teacher" || regenTarget === "both") && !teacher_md) {
+      setError("Chybí Teacher Notes (není co upravit).");
+      return;
+    }
+    if ((regenTarget === "student" || regenTarget === "both") && !student_md) {
+      setError("Chybí Student Notes (není co upravit).");
       return;
     }
 
@@ -226,464 +444,1003 @@ export default function TeacherTopicDetail() {
       const data = await regenerateNotes(classId, topicId, {
         target: regenTarget,
         user_note: userNote,
-        extracted: result.extracted,
-        teacher_notes_md: result.teacher_notes_md,
-        student_notes_md: result.student_notes_md,
-        raw_text: rawText,
-        duration_minutes: duration,
+        teacher_notes_md: teacher_md,
+        student_notes_md: student_md,
       });
 
-      setResult(data);
+      const normalized = {
+        ...data,
+        teacher_notes_md: normalizeMd(data?.teacher_notes_md || ""),
+        student_notes_md: normalizeMd(data?.student_notes_md || ""),
+      };
 
-      if (data && !data.rejected) {
-        const newId = _snapshotResult(data, `Regenerace: ${regenTarget}`);
-        setActiveVersionId(newId);
+      setResult(normalized);
+
+      if (normalized && !normalized.rejected) {
+        const id = _snapshotResult(normalized, `Regenerace: ${regenTarget}`);
+
+        // po regeneraci chceme vždy přepnout na novou verzi
+        if (regenTarget === "teacher") {
+          setActiveTeacherVersionId(id);
+          setTeacherDraft(normalized.teacher_notes_md || "");
+        } else if (regenTarget === "student") {
+          setActiveStudentVersionId(id);
+          setStudentDraft(normalized.student_notes_md || "");
+        } else {
+          setActiveTeacherVersionId(id);
+          setActiveStudentVersionId(id);
+          setTeacherDraft(normalized.teacher_notes_md || "");
+          setStudentDraft(normalized.student_notes_md || "");
+        }
       }
 
       setUserNote("");
     } catch (e) {
-      const code = e?.code;
-      if (code === "file_error") setError(`Chyba souboru: ${e.message}`);
-      else setError(e?.message || "Nepodařilo se přegenerovat poznámky.");
+      setError(e?.message || "Nepodařilo se přegenerovat poznámky.");
     } finally {
       setRegenLoading(false);
     }
   }
 
-  // --- STYLES ---
-  const btnStyle = {
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: "1px solid #2b2b2b",
-    background: "#1b1b1b",
-    color: "#fff",
-    cursor: "pointer",
+  // ✅ Uložit změny do historie; pokud jde o DB verzi, zapiš rovnou i do DB
+  async function saveDraft(kind) {
+    setError("");
+    const id =
+      kind === "teacher" ? activeTeacherVersionId : activeStudentVersionId;
+    if (!id) return;
+
+    const draft =
+      kind === "teacher" ? normalizeMd(teacherDraft) : normalizeMd(studentDraft);
+
+    // 1) lokálně propsat do historie
+    setHistory((prev) =>
+      prev.map((h) => {
+        if (h.id !== id) return h;
+
+        const snap = { ...(h.resultSnapshot || {}) };
+        if (kind === "teacher") snap.teacher_notes_md = draft || "";
+        else snap.student_notes_md = draft || "";
+
+        const newLabel = (h.label || "").includes("upraveno")
+          ? h.label
+          : `${h.label} (upraveno)`;
+
+        return { ...h, label: newLabel, resultSnapshot: snap };
+      })
+    );
+
+    // 2) pokud je to DB verze, ulož rovnou do DB
+    const isDb =
+      (kind === "teacher" && id === dbTeacherVersionId) ||
+      (kind === "student" && id === dbStudentVersionId);
+
+    try {
+      if (isDb) {
+        if (kind === "teacher")
+          await saveFinalTeacherNotes(classId, topicId, draft || "");
+        else await saveFinalStudentNotes(classId, topicId, draft || "");
+        setError("✅ Změny uložené (lokálně + do DB).");
+      } else {
+        setError("✅ Změny uložené (lokálně). Pro DB použij „Uložit jako finální“.");
+      }
+    } catch (e) {
+      setError(e?.message || "Nepodařilo se uložit změny do DB.");
+    }
+
+    if (kind === "teacher") setIsEditingTeacher(false);
+    else setIsEditingStudent(false);
+  }
+
+  // ✅ uložit aktuální draft do DB jako finální
+  async function saveFinalFromActive(kind) {
+    setError("");
+    setSaveFinalLoading(true);
+
+    try {
+      if (kind === "teacher") {
+        if (!activeTeacherVersionId)
+          throw new Error("Vyber verzi pro Teacher Notes.");
+        await saveFinalTeacherNotes(classId, topicId, normalizeMd(teacherDraft));
+        setDbTeacherVersionId(activeTeacherVersionId);
+        setError("✅ Teacher finální uloženo do DB.");
+      } else {
+        if (!activeStudentVersionId)
+          throw new Error("Vyber verzi pro Student Notes.");
+        await saveFinalStudentNotes(classId, topicId, normalizeMd(studentDraft));
+        setDbStudentVersionId(activeStudentVersionId);
+        setError("✅ Student finální uloženo do DB.");
+      }
+    } catch (e) {
+      setError(e?.message || "Nepodařilo se uložit finální verzi.");
+    } finally {
+      setSaveFinalLoading(false);
+    }
+  }
+
+  // --- HISTORIE: v Tvorbě jen mazání ---
+  function deleteVersion(id) {
+    setHistory((prev) => prev.filter((h) => h.id !== id));
+    if (activeTeacherVersionId === id) setActiveTeacherVersionId(null);
+    if (activeStudentVersionId === id) setActiveStudentVersionId(null);
+    if (dbTeacherVersionId === id) setDbTeacherVersionId(null);
+    if (dbStudentVersionId === id) setDbStudentVersionId(null);
+  }
+
+  function clearHistory() {
+    setHistory([]);
+    setActiveTeacherVersionId(null);
+    setActiveStudentVersionId(null);
+    setDbTeacherVersionId(null);
+    setDbStudentVersionId(null);
+  }
+
+  const hasAnyOutput = history.length > 0 || (!!result && !result.rejected);
+  const hasDbTeacher = !!dbTeacherVersionId;
+  const hasDbStudent = !!dbStudentVersionId;
+
+  const logout = () => {
+    localStorage.removeItem("access_token");
+    window.location.href = "/";
   };
 
-  const btnStyleDanger = {
-    ...btnStyle,
-    border: "1px solid #3a1f1f",
-    background: "#221010",
+  // decorace
+  const randomDecos = useMemo(() => {
+    const rand = mulberry32(123);
+
+    const starsCount = 18 + Math.floor(rand() * 10);
+    const flightsCount = 6 + Math.floor(rand() * 4);
+
+    const items = [];
+    const add = (count, type) => {
+      for (let i = 0; i < count; i++) {
+        const left = `${Math.round(rand() * 100)}%`;
+        const top = `${Math.round(rand() * 85)}%`;
+
+        const scale =
+          type === "star" ? 0.6 + rand() * 0.9 : 0.75 + rand() * 0.7;
+        const rotate = (rand() * 30 - 15).toFixed(1);
+        const opacity = (0.18 + rand() * 0.32).toFixed(2);
+
+        items.push({
+          id: `${type}-${i}`,
+          type,
+          src: type === "star" ? star : flight,
+          style: {
+            left,
+            top,
+            opacity,
+            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotate}deg)`,
+          },
+        });
+      }
+    };
+
+    add(starsCount, "star");
+    add(flightsCount, "flight");
+    return items;
+  }, []);
+
+  // layout 2 sloupců
+  const twoCol = {
+    display: "grid",
+    gridTemplateColumns: "1fr 360px",
+    gap: 14,
+    alignItems: "start",
   };
 
-  const btnStylePrimary = {
-    ...btnStyle,
-    border: "1px solid #2d4a2d",
-    background: "#122012",
+  const sticky = {
+    position: "sticky",
+    top: 14,
+    alignSelf: "start",
+    display: "grid",
+    gap: 12,
   };
 
-  const inputStyle = {
-    padding: "10px 12px",
-    borderRadius: 10,
-    border: "1px solid #2b2b2b",
-    background: "#0f0f0f",
-    color: "#fff",
+  const tabsRow = {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
     width: "100%",
   };
 
+  const tabLeft = {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    alignItems: "center",
+  };
+
+  // “paper” plocha pro output (markdown)
+  const paperBox = {
+    background: "rgba(255,255,255,0.72)",
+    border: "1px solid rgba(0,0,0,0.08)",
+    borderRadius: 16,
+    padding: 14,
+    color: "#1f2330",
+    lineHeight: 1.6,
+    overflowX: "auto", // ✅ aby se nerozbíjela stránka při dlouhých řádcích/kódu
+  };
+
+  const codeTextareaStyle = {
+    minHeight: 460,
+    resize: "vertical",
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+    lineHeight: 1.5,
+    color: "#1f2330",
+  };
+
+  const dbTeacherLabel = useMemo(() => {
+    if (!dbTeacherVersionId) return "—";
+    const it = getById(dbTeacherVersionId);
+    if (!it) return "—";
+    const n = getVersionNumber(dbTeacherVersionId);
+    return `Verze ${n ?? "—"} — ${it.label} — ${formatTime(it.createdAt)}`;
+  }, [dbTeacherVersionId, history]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const dbStudentLabel = useMemo(() => {
+    if (!dbStudentVersionId) return "—";
+    const it = getById(dbStudentVersionId);
+    if (!it) return "—";
+    const n = getVersionNumber(dbStudentVersionId);
+    return `Verze ${n ?? "—"} — ${it.label} — ${formatTime(it.createdAt)}`;
+  }, [dbStudentVersionId, history]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const noNotesYet =
+    (tab === "teacher" && !hasDbTeacher && !activeTeacherVersionId) ||
+    (tab === "student" && !hasDbStudent && !activeStudentVersionId);
+
   return (
-    <div style={{ maxWidth: 900 }}>
-      <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <button style={btnStyle} onClick={() => navigate(-1)}>
-          ← Zpět
-        </button>
-      </div>
+    <div className="tcdPage">
+      {/* decor */}
+      <img className="tcdDec tcdClouds" src={clouds} alt="" aria-hidden="true" />
+      {randomDecos.map((d) => (
+        <img
+          key={d.id}
+          className={`tcdDec tcdRand ${
+            d.type === "flight" ? "tcdRandFlight" : "tcdRandStar"
+          }`}
+          src={d.src}
+          alt=""
+          aria-hidden="true"
+          style={d.style}
+        />
+      ))}
+      <img className="tcdDec tcdLabs" src={labs} alt="" aria-hidden="true" />
 
-      <h1 style={{ marginBottom: 10 }}>Kapitola – workflow</h1>
-
-      <div
-        style={{
-          border: "1px solid #2b2b2b",
-          borderRadius: 12,
-          padding: 12,
-          background: "#121212",
-          marginBottom: 14,
-          opacity: 0.9,
-        }}
-      >
-        ⚠️ Výstup je generovaný AI. Zkontroluj fakta a letopočty před použitím ve výuce.
-      </div>
-
-      {error && (
-        <div style={{ color: "#ff6b6b", marginBottom: 12, whiteSpace: "pre-wrap" }}>
-          {error}
-        </div>
-      )}
-
-      {/* FINÁLNÍ VERZE - INFO BOX */}
-      {finalItem && (
-        <div
-          style={{
-            border: "1px solid #2d4a2d",
-            borderRadius: 12,
-            padding: 12,
-            background: "#101a10",
-            marginBottom: 14,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-            <div>
-              <div style={{ fontWeight: 900 }}>⭐ Finální verze (zatím jen UI)</div>
-              <div style={{ opacity: 0.75, marginTop: 4, fontSize: 13 }}>
-                {finalItem.label} • {formatTime(finalItem.createdAt)}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              <button style={btnStyle} type="button" onClick={() => restoreVersion(finalItem.id)}>
-                Otevřít finální
-              </button>
-              <button style={btnStyleDanger} type="button" onClick={clearFinal}>
-                Zrušit finální
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* HISTORY */}
-      {history.length > 0 && (
-        <div
-          style={{
-            border: "1px solid #2b2b2b",
-            borderRadius: 12,
-            padding: 12,
-            background: "#0f0f0f",
-            marginBottom: 14,
-          }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center" }}>
-            <div style={{ fontWeight: 800 }}>Historie verzí (bez DB)</div>
-            <button style={btnStyleDanger} type="button" onClick={clearHistory}>
-              Smazat historii
+      <div className="tcdWrap">
+        {/* TOPBAR */}
+        <div className="tcdTopbar">
+          <img className="tcdLogo" src={logo} alt="GenAlpha" />
+          <div className="tcdTopActions">
+            <button className="tcdBtn pillDanger" onClick={logout}>
+              ⟶ Odhlásit se
             </button>
           </div>
+        </div>
 
-          <div style={{ marginTop: 10, display: "grid", gap: 8 }}>
-            {history.map((h, idx) => {
-              const isActive = activeVersionId === h.id;
-              const isFinal = finalVersionId === h.id;
+        {/* HEADER */}
+        <div className="tcdHeader">
+          <div className="tcdHeaderLeft">
+<h1 className="tcdTitle">
+  {classTitle || `Třída ${classId}`} – {topicTitle || `Kapitola ${topicId}`}
+</h1>
 
-              return (
-                <div
-                  key={h.id}
-                  style={{
-                    border: isFinal ? "1px solid #2d4a2d" : "1px solid #2b2b2b",
-                    borderRadius: 10,
-                    padding: "10px 10px",
-                    background: isFinal ? "#121b12" : isActive ? "#141414" : "#101010",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 10,
-                  }}
+            <div style={tabsRow}>
+              <div style={tabLeft}>
+                <button
+                  className={tab === "build" ? "tcdBtn primarySoft" : "tcdBtn ghost"}
+                  type="button"
+                  onClick={() => setTab("build")}
                 >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700 }}>
-                      {isFinal ? "⭐ " : ""}
-                      {isActive ? "✅ " : ""}
-                      Verze {history.length - idx} — {h.label}
-                    </div>
-                    <div style={{ opacity: 0.65, fontSize: 13 }}>
-                      {formatTime(h.createdAt)}
-                    </div>
-                  </div>
+                  ● Tvorba
+                </button>
 
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    <button style={btnStyle} type="button" onClick={() => restoreVersion(h.id)}>
-                      Vrátit
-                    </button>
+                <button
+                  className={tab === "student" ? "tcdBtn primarySoft" : "tcdBtn ghost"}
+                  type="button"
+                  onClick={() => setTab("student")}
+                  disabled={!hasAnyOutput && !hasDbStudent}
+                  title={!hasAnyOutput && !hasDbStudent ? "Nejdřív vygeneruj výstup." : ""}
+                >
+                  👤 Student Notes
+                </button>
 
-                    <button
-                      style={btnStylePrimary}
-                      type="button"
-                      onClick={() => setAsFinal(h.id)}
-                      disabled={isFinal}
-                      title={isFinal ? "Toto je finální verze" : "Označit jako finální"}
-                    >
-                      {isFinal ? "⭐ Finální" : "Nastavit jako finální"}
-                    </button>
+                <button
+                  className={tab === "teacher" ? "tcdBtn primarySoft" : "tcdBtn ghost"}
+                  type="button"
+                  onClick={() => setTab("teacher")}
+                  disabled={!hasAnyOutput && !hasDbTeacher}
+                  title={!hasAnyOutput && !hasDbTeacher ? "Nejdřív vygeneruj výstup." : ""}
+                >
+                  👨‍🏫 Teacher Notes
+                </button>
 
-                    <button style={btnStyleDanger} type="button" onClick={() => deleteVersion(h.id)}>
-                      Smazat
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                <button
+                  className={tab === "quiz" ? "tcdBtn primarySoft" : "tcdBtn ghost"}
+                  type="button"
+                  onClick={() => setTab("quiz")}
+                  disabled={!hasAnyOutput && !hasDbTeacher && !hasDbStudent}
+                  title={
+                    !hasAnyOutput && !hasDbTeacher && !hasDbStudent
+                      ? "Nejdřív vygeneruj výstup."
+                      : ""
+                  }
+                >
+                  ❓ Quiz
+                </button>
+              </div>
 
-          <div style={{ fontSize: 13, opacity: 0.65, marginTop: 10, lineHeight: 1.35 }}>
-            Pozn.: historie je jen v paměti stránky. Po refreshi se smaže.
-          </div>
-        </div>
-      )}
-
-      {/* Duration */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ marginBottom: 6, opacity: 0.85 }}>Délka hodiny (min)</div>
-        <input
-          type="number"
-          min={5}
-          max={240}
-          value={duration}
-          onChange={(e) => setDuration(Number(e.target.value || 45))}
-          style={{ ...inputStyle, maxWidth: 220 }}
-        />
-      </div>
-
-      {/* Raw text */}
-      <div style={{ marginBottom: 12 }}>
-        <div style={{ marginBottom: 6, opacity: 0.85 }}>Text od učitele</div>
-        <textarea
-          value={rawText}
-          onChange={(e) => setRawText(e.target.value)}
-          placeholder="Vlož sem text (např. z Wikipedie, poznámky, osnovu...)"
-          style={{ ...inputStyle, minHeight: 160, resize: "vertical" }}
-        />
-      </div>
-
-      {/* File upload */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ marginBottom: 6, opacity: 0.85 }}>
-          Přílohy (max 3) – PDF / obrázky (PNG/JPG/WEBP)
-        </div>
-
-        <input
-          type="file"
-          multiple
-          accept="application/pdf,image/*"
-          onChange={onFilesChange}
-          style={{ color: "#fff" }}
-        />
-
-        <div style={{ fontSize: 13, opacity: 0.65, marginTop: 6, lineHeight: 1.35 }}>
-          Tip: Pokud PDF nejde načíst, často je to sken bez textu. Zkus:
-          <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
-            <li>nahrát sken jako obrázek (JPG/PNG), nebo</li>
-            <li>z PDF zkopírovat text a vložit ho do pole „Text od učitele“.</li>
-          </ul>
-        </div>
-
-        {files.length > 0 && (
-          <div
-            style={{
-              marginTop: 10,
-              border: "1px solid #2b2b2b",
-              borderRadius: 12,
-              padding: 10,
-              background: "#101010",
-            }}
-          >
-            <div style={{ marginBottom: 8, opacity: 0.85 }}>
-              Vybrané soubory:
+              <button
+                className="tcdBtn ghost"
+                onClick={() => navigate(`/teacher/classes/${classId}`)}
+              >
+                ← Zpět
+              </button>
             </div>
 
-            <ul style={{ margin: 0, paddingLeft: 0, listStyle: "none", opacity: 0.95 }}>
-              {files.map((f, idx) => {
-                const icon = _isPdf(f) ? "📄" : _isImage(f) ? "🖼️" : "📎";
-                return (
-                  <li
-                    key={`${f.name}-${f.size}-${idx}`}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      padding: "8px 10px",
-                      border: "1px solid #2b2b2b",
-                      borderRadius: 10,
-                      marginBottom: 8,
-                      background: "#0f0f0f",
-                    }}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        {icon} {f.name}
-                      </div>
-                      <div style={{ opacity: 0.65, fontSize: 13 }}>
-                        {Math.round(f.size / 1024)} KB • {f.type || "unknown"}
-                      </div>
-                    </div>
+            
+          </div>
+        </div>
 
-                    <button
-                      type="button"
-                      style={{ ...btnStyleDanger, padding: "8px 10px" }}
-                      onClick={() => removeFileAt(idx)}
-                      title="Odebrat soubor"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <button style={{ ...btnStyle, marginTop: 6 }} onClick={clearFiles} type="button">
-              Odebrat všechny soubory
-            </button>
+        {/* status */}
+        {error && (
+          <div
+            className={error.startsWith("✅") ? "tcdSuccess" : "tcdError"}
+            style={{ marginBottom: 12 }}
+          >
+            {error}
           </div>
         )}
-      </div>
 
-      {/* Run */}
-      <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-        <button style={btnStyle} onClick={onRun} disabled={loading}>
-          {loading ? "Generuji…" : "▶ Spustit workflow"}
-        </button>
-      </div>
-
-      {/* Result */}
-      {result && (
-        <div style={{ marginTop: 18 }}>
-          {result.rejected ? (
-            <div
-              style={{
-                border: "1px solid #ff6b6b",
-                borderRadius: 12,
-                padding: 12,
-                background: "#1a0f0f",
-              }}
-            >
-              <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                Zamítnuto kontrolorem
-              </div>
-              <div style={{ opacity: 0.9 }}>{result.reject_reason}</div>
-            </div>
-          ) : (
-            <>
-              {Array.isArray(result.warnings) && result.warnings.length > 0 && (
-                <div
-                  style={{
-                    border: "1px solid #f5c542",
-                    borderRadius: 12,
-                    padding: 12,
-                    background: "#1a160a",
-                    marginBottom: 12,
-                  }}
-                >
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>
-                    Upozornění
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: 18 }}>
-                    {result.warnings.map((w, i) => (
-                      <li key={i} style={{ opacity: 0.9 }}>
-                        {w}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Quick actions for current */}
-              {activeVersionId && (
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+        <div style={twoCol}>
+          {/* LEFT */}
+          <div style={{ display: "grid", gap: 12 }}>
+            {/* HISTORY: v Tvorbě jen mazání */}
+            {tab === "build" && history.length > 0 && (
+              <div className="tcdCard">
+                <div className="tcdCardHeader" style={{ alignItems: "center" }}>
+                  <div className="tcdCardTitle">Historie verzí</div>
                   <button
-                    style={btnStylePrimary}
+                    className="tcdBtn pillDanger"
                     type="button"
-                    onClick={() => setAsFinal(activeVersionId)}
-                    disabled={finalVersionId === activeVersionId}
-                    title="Označit aktuálně zobrazenou verzi jako finální"
+                    onClick={clearHistory}
                   >
-                    {finalVersionId === activeVersionId ? "⭐ Aktuální je finální" : "⭐ Nastavit aktuální jako finální"}
+                    Smazat historii
                   </button>
                 </div>
-              )}
 
-              {/* Regenerate block */}
-              <div
-                style={{
-                  border: "1px solid #2b2b2b",
-                  borderRadius: 12,
-                  padding: 12,
-                  background: "#0f0f0f",
-                  marginBottom: 12,
-                }}
-              >
-                <div style={{ fontWeight: 800, marginBottom: 10 }}>
-                  Upravit výstup poznámkou (regenerace)
+                <div style={{ display: "grid", gap: 10 }}>
+                  {history.map((h, idx) => (
+                    <div
+                      key={h.id}
+                      className="tcdTopic"
+                      style={{ cursor: "default" }}
+                      onClick={(e) => e.preventDefault()}
+                    >
+                      <div className="tcdTopicLeft" style={{ alignItems: "flex-start" }}>
+                        <div className="tcdBulb" aria-hidden="true">
+                          🧾
+                        </div>
+                        <div>
+                          <div className="tcdTopicTitle">
+                            Verze {history.length - idx} — {h.label}
+                          </div>
+                          <div style={{ opacity: 0.7, fontSize: 13 }}>
+                            {formatTime(h.createdAt)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="tcdTopicActions"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          className="tcdBtn pillDanger"
+                          type="button"
+                          onClick={() => deleteVersion(h.id)}
+                        >
+                          Smazat
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
+                <div style={{ opacity: 0.65, fontSize: 13, marginTop: 10 }}>
+                  Pozn.: historie je jen v paměti stránky. Po refreshi se smaže.
+                </div>
+              </div>
+            )}
+
+            {/* TVORBA */}
+            {tab === "build" && (
+              <div className="tcdCard">
+                <div className="tcdCardTitle" style={{ marginBottom: 6 }}>
+                  Tvorba
+                </div>
+                <div className="tcdSubtitle" style={{ marginBottom: 16 }}>
+                  Zde jen zadáš vstupy a spustíš generování.
+                </div>
+
+                <div style={{ fontWeight: 800, marginBottom: 6, color: "#1f2330" }}>
+                  Délka hodiny (min):
+                </div>
+                <div className="tcdField" style={{ marginBottom: 14 }}>
+                  <input
+                    className="tcdInput"
+                    type="number"
+                    min={5}
+                    max={240}
+                    value={duration}
+                    onChange={(e) => setDuration(Number(e.target.value || 45))}
+                    style={{ maxWidth: 320 }}
+                  />
+                </div>
+
+                <div style={{ fontWeight: 800, marginBottom: 6, color: "#1f2330" }}>
+                  Text od učitele:
+                </div>
+                <div className="tcdField">
+                  <textarea
+                    className="tcdInput"
+                    value={rawText}
+                    onChange={(e) => setRawText(e.target.value)}
+                    placeholder="Vlož sem text (poznámky, osnovu, výtah z učebnice...)"
+                    style={{
+                      minHeight: 240,
+                      resize: "vertical",
+                      lineHeight: 1.45,
+                      color: "#1f2330",
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* STUDENT NOTES */}
+            {tab === "student" && (
+              <div className="tcdCard">
+                <div className="tcdCardHeader" style={{ alignItems: "baseline" }}>
+                  <div className="tcdCardTitle">Student Notes</div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={{ opacity: 0.65, fontSize: 13 }}>
+                      verze:{" "}
+                      {activeStudentVersionId
+                        ? formatTime(getById(activeStudentVersionId)?.createdAt)
+                        : "—"}
+                    </div>
+
+                    {!isEditingStudent ? (
+                      <button
+                        className="tcdBtn ghost"
+                        type="button"
+                        onClick={() => setIsEditingStudent(true)}
+                        disabled={noNotesYet}
+                      >
+                        ✏️ Upravit
+                      </button>
+                    ) : (
+                      <button
+                        className="tcdBtn ghost"
+                        type="button"
+                        onClick={() => setIsEditingStudent(false)}
+                      >
+                        👁️ Náhled
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {noNotesYet ? (
+                  <div style={{ ...paperBox, opacity: 0.9 }}>
+                    Nejdřív vygenerujte obsah v záložce <b>Tvorba</b>!
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      className="tcdInput"
+                      value={activeStudentVersionId || ""}
+                      onChange={(e) => setActiveStudentVersionId(e.target.value || null)}
+                      disabled={history.length === 0}
+                      style={{ marginBottom: 12 }}
+                    >
+                      <option value="">
+                        {history.length === 0 ? "— žádné verze —" : "Vyber verzi"}
+                      </option>
+                      {history.map((h, idx) => (
+                        <option key={h.id} value={h.id}>
+                          {`Verze ${history.length - idx} — ${h.label} — ${formatTime(
+                            h.createdAt
+                          )}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    {!isEditingStudent ? (
+                      <div style={paperBox} className="mdBody">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {normalizeMd(studentDraft) || "—"}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <textarea
+                        className="tcdInput"
+                        value={studentDraft}
+                        onChange={(e) => setStudentDraft(e.target.value)}
+                        style={codeTextareaStyle}
+                      />
+                    )}
+
+                    {isEditingStudent && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          marginTop: 12,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          className="tcdBtn"
+                          type="button"
+                          onClick={() => saveDraft("student")}
+                        >
+                          💾 Uložit změny
+                        </button>
+                        <button
+                          className="tcdBtn ghost"
+                          type="button"
+                          onClick={() => {
+                            setStudentDraft(normalizeMd(studentView || ""));
+                            setIsEditingStudent(false);
+                          }}
+                        >
+                          Zrušit
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* TEACHER NOTES */}
+            {tab === "teacher" && (
+              <div className="tcdCard">
+                <div className="tcdCardHeader" style={{ alignItems: "baseline" }}>
+                  <div className="tcdCardTitle">Teacher Notes</div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 10,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div style={{ opacity: 0.65, fontSize: 13 }}>
+                      verze:{" "}
+                      {activeTeacherVersionId
+                        ? formatTime(getById(activeTeacherVersionId)?.createdAt)
+                        : "—"}
+                    </div>
+
+                    {!isEditingTeacher ? (
+                      <button
+                        className="tcdBtn ghost"
+                        type="button"
+                        onClick={() => setIsEditingTeacher(true)}
+                        disabled={noNotesYet}
+                      >
+                        ✏️ Upravit
+                      </button>
+                    ) : (
+                      <button
+                        className="tcdBtn ghost"
+                        type="button"
+                        onClick={() => setIsEditingTeacher(false)}
+                      >
+                        👁️ Náhled
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {noNotesYet ? (
+                  <div style={{ ...paperBox, opacity: 0.9 }}>
+                    Nejdřív vygenerujte obsah v záložce <b>Tvorba</b>!
+                  </div>
+                ) : (
+                  <>
+                    <select
+                      className="tcdInput"
+                      value={activeTeacherVersionId || ""}
+                      onChange={(e) => setActiveTeacherVersionId(e.target.value || null)}
+                      disabled={history.length === 0}
+                      style={{ marginBottom: 12 }}
+                    >
+                      <option value="">
+                        {history.length === 0 ? "— žádné verze —" : "Vyber verzi"}
+                      </option>
+                      {history.map((h, idx) => (
+                        <option key={h.id} value={h.id}>
+                          {`Verze ${history.length - idx} — ${h.label} — ${formatTime(
+                            h.createdAt
+                          )}`}
+                        </option>
+                      ))}
+                    </select>
+
+                    {!isEditingTeacher ? (
+                      <div style={paperBox} className="mdBody">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          {normalizeMd(teacherDraft) || "—"}
+                        </ReactMarkdown>
+                      </div>
+                    ) : (
+                      <textarea
+                        className="tcdInput"
+                        value={teacherDraft}
+                        onChange={(e) => setTeacherDraft(e.target.value)}
+                        style={codeTextareaStyle}
+                      />
+                    )}
+
+                    {isEditingTeacher && (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 10,
+                          marginTop: 12,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <button
+                          className="tcdBtn"
+                          type="button"
+                          onClick={() => saveDraft("teacher")}
+                        >
+                          💾 Uložit změny
+                        </button>
+                        <button
+                          className="tcdBtn ghost"
+                          type="button"
+                          onClick={() => {
+                            setTeacherDraft(normalizeMd(teacherView || ""));
+                            setIsEditingTeacher(false);
+                          }}
+                        >
+                          Zrušit
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* QUIZ */}
+            {tab === "quiz" && (
+              <div className="tcdCard">
+                <div className="tcdCardTitle">Quiz</div>
+                <div className="tcdSubtitle">
+                  Sem napojíš generování / zobrazení kvízu.
+                </div>
+              </div>
+            )}
+
+            {/* Metadata collapsible */}
+            {(tab === "teacher" || tab === "student") && (
+              <div className="tcdCard" style={{ opacity: 0.98 }}>
+                <button
+                  className="tcdBtn ghost"
+                  type="button"
+                  onClick={() => setShowMeta((v) => !v)}
+                  style={{ width: "fit-content" }}
+                >
+                  {showMeta ? "▾ Skrýt metadata" : "▸ Zobrazit metadata"}
+                </button>
+
+                {showMeta && (
+                  <pre
+                    style={{
+                      marginTop: 10,
+                      background: "rgba(255,255,255,0.72)",
+                      border: "1px solid rgba(0,0,0,0.08)",
+                      borderRadius: 16,
+                      padding: 12,
+                      whiteSpace: "pre-wrap",
+                      marginBottom: 0,
+                      color: "#1f2330",
+                      fontSize: 12,
+                      lineHeight: 1.4,
+                      overflowX: "auto",
+                    }}
+                  >
+                    {JSON.stringify(extractedView, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT */}
+          <div style={sticky}>
+            {/* BUILD: Akce + Přílohy */}
+            {tab === "build" && (
+              <>
+                <div className="tcdCard">
+                  <div className="tcdCardTitle" style={{ marginBottom: 10 }}>
+                    Akce
+                  </div>
+
+                  <button
+                    className="tcdBtn primary"
+                    style={{ width: "100%" }}
+                    onClick={onRun}
+                    disabled={loading}
+                  >
+                    {loading ? "Generuji…" : "→ Spustit workflow"}
+                  </button>
+
+                  <div
+                    style={{
+                      opacity: 0.75,
+                      fontSize: 13,
+                      marginTop: 10,
+                      lineHeight: 1.35,
+                      color: "#1f2330",
+                    }}
+                  >
+                    Po prvním úspěšném výstupu se učitelské i studentské poznámky
+                    automaticky uloží do DB.
+                  </div>
+                </div>
+
+                <div className="tcdCard">
+                  <div
+                    className="tcdCardTitle"
+                    style={{ fontSize: 16, marginBottom: 10 }}
+                  >
+                    Přílohy (max 3) — PDF / obrázky
+                  </div>
+
+                  <div
+                    style={{
+                      border: "2px dashed rgba(120, 120, 255, 0.35)",
+                      borderRadius: 18,
+                      padding: 14,
+                      background: "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "grid",
+                        placeItems: "center",
+                        height: 92,
+                        borderRadius: 16,
+                        background: "rgba(255,255,255,0.70)",
+                        border: "1px solid rgba(0,0,0,0.06)",
+                        marginBottom: 12,
+                      }}
+                      aria-hidden="true"
+                    >
+                      <div style={{ fontSize: 32 }}>🗂️</div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="tcdBtn primary"
+                      style={{ width: "100%" }}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      ＋ Přidat přílohu
+                    </button>
+
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="application/pdf,image/*"
+                      onChange={onFilesChange}
+                      style={{ display: "none" }}
+                    />
+
+                    <div
+                      style={{
+                        opacity: 0.7,
+                        fontSize: 13,
+                        marginTop: 8,
+                        color: "#1f2330",
+                      }}
+                    >
+                      Podporované: PDF, PNG/JPG/WEBP.
+                    </div>
+
+                    {files.length > 0 && (
+                      <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                        {files.map((f, idx) => {
+                          const icon = _isPdf(f) ? "📄" : _isImage(f) ? "🖼️" : "📎";
+                          return (
+                            <div
+                              key={`${f.name}-${f.size}-${idx}`}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 10,
+                                padding: "10px 12px",
+                                borderRadius: 14,
+                                background: "rgba(255,255,255,0.75)",
+                                border: "1px solid rgba(0,0,0,0.08)",
+                              }}
+                            >
+                              <div style={{ minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontWeight: 800,
+                                    color: "#1f2330",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    maxWidth: 230,
+                                  }}
+                                  title={f.name}
+                                >
+                                  {icon} {f.name}
+                                </div>
+                                <div style={{ opacity: 0.7, fontSize: 12 }}>
+                                  {Math.round(f.size / 1024)} KB
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                className="tcdBtn pillDanger"
+                                style={{ padding: "6px 10px" }}
+                                onClick={() => removeFileAt(idx)}
+                                title="Odebrat"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          );
+                        })}
+
+                        <button
+                          type="button"
+                          className="tcdBtn ghost"
+                          onClick={clearFiles}
+                        >
+                          Odebrat všechny soubory
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* NOTES: finální + regen + info o DB */}
+            {(tab === "teacher" || tab === "student") && (
+              <>
+                <div className="tcdCard">
+                  <div
+                    className="tcdCardTitle"
+                    style={{ fontSize: 16, marginBottom: 10 }}
+                  >
+                    Aktuálně uložené v DB
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 13,
+                      opacity: 0.85,
+                      color: "#1f2330",
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    <div>
+                      <b>Teacher:</b> {dbTeacherLabel}
+                    </div>
+                    <div style={{ marginTop: 6 }}>
+                      <b>Student:</b> {dbStudentLabel}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="tcdCard">
+                  <div
+                    className="tcdCardTitle"
+                    style={{ fontSize: 16, marginBottom: 10 }}
+                  >
+                    Finální verze
+                  </div>
+
+                  <div
+                    style={{
+                      opacity: 0.75,
+                      fontSize: 13,
+                      marginBottom: 10,
+                      color: "#1f2330",
+                    }}
+                  >
+                    Uloží aktuálně vybranou verzi (a její úpravy) do DB jako finální.
+                  </div>
+
+                  <button
+                    className="tcdBtn primary"
+                    style={{ width: "100%" }}
+                    onClick={() =>
+                      saveFinalFromActive(tab === "teacher" ? "teacher" : "student")
+                    }
+                    disabled={saveFinalLoading || noNotesYet}
+                    title={noNotesYet ? "Nejdřív vygeneruj výstup v Tvorbě." : ""}
+                  >
+                    {saveFinalLoading ? "Ukládám…" : "⭐ Uložit jako finální do DB"}
+                  </button>
+                </div>
+
+                <div className="tcdCard">
+                  <div
+                    className="tcdCardTitle"
+                    style={{ fontSize: 16, marginBottom: 10 }}
+                  >
+                    Upravit výstup poznámkou
+                  </div>
+
                   <select
+                    className="tcdInput"
                     value={regenTarget}
                     onChange={(e) => setRegenTarget(e.target.value)}
-                    style={{ ...inputStyle, maxWidth: 220 }}
+                    disabled={noNotesYet}
                   >
                     <option value="teacher">Učitel</option>
                     <option value="student">Student</option>
                     <option value="both">Oboje</option>
                   </select>
+
+                  <textarea
+                    className="tcdInput"
+                    value={userNote}
+                    onChange={(e) => setUserNote(e.target.value)}
+                    disabled={noNotesYet}
+                    placeholder='Např. "zjednoduš", "přidej víc příkladů", "udělej to interaktivní"...'
+                    style={{
+                      minHeight: 110,
+                      resize: "vertical",
+                      marginTop: 10,
+                      color: "#1f2330",
+                    }}
+                  />
+
+                  <button
+                    className="tcdBtn"
+                    style={{ width: "100%", marginTop: 10 }}
+                    onClick={onRegenerate}
+                    disabled={regenLoading || !userNote.trim() || noNotesYet}
+                    title={noNotesYet ? "Nejdřív vygeneruj výstup v Tvorbě." : ""}
+                  >
+                    {regenLoading ? "Regeneruji…" : "♻️ Přegenerovat"}
+                  </button>
                 </div>
-
-                <textarea
-                  value={userNote}
-                  onChange={(e) => setUserNote(e.target.value)}
-                  placeholder='Např. "udělej to víc interaktivní", "zjednoduš", "přidej víc příkladů"...'
-                  style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-                />
-
-                <button
-                  style={{ ...btnStyle, marginTop: 10 }}
-                  onClick={onRegenerate}
-                  disabled={regenLoading || !userNote.trim()}
-                >
-                  {regenLoading ? "Regeneruji…" : "♻️ Přegenerovat"}
-                </button>
-              </div>
-
-              <div style={{ display: "grid", gap: 12 }}>
-                <div
-                  style={{
-                    border: "1px solid #2b2b2b",
-                    borderRadius: 12,
-                    padding: 12,
-                    background: "#101010",
-                  }}
-                >
-                  <div style={{ fontWeight: 800, marginBottom: 10 }}>
-                    Teacher notes
-                  </div>
-                  <pre style={{ whiteSpace: "pre-wrap", margin: 0, opacity: 0.95 }}>
-                    {result.teacher_notes_md}
-                  </pre>
-                </div>
-
-                <div
-                  style={{
-                    border: "1px solid #2b2b2b",
-                    borderRadius: 12,
-                    padding: 12,
-                    background: "#101010",
-                  }}
-                >
-                  <div style={{ fontWeight: 800, marginBottom: 10 }}>
-                    Student notes
-                  </div>
-                  <pre style={{ whiteSpace: "pre-wrap", margin: 0, opacity: 0.95 }}>
-                    {result.student_notes_md}
-                  </pre>
-                </div>
-
-                <div
-                  style={{
-                    border: "1px solid #2b2b2b",
-                    borderRadius: 12,
-                    padding: 12,
-                    background: "#0f0f0f",
-                    opacity: 0.9,
-                  }}
-                >
-                  <div style={{ fontWeight: 800, marginBottom: 10 }}>Metadata</div>
-                  <pre style={{ whiteSpace: "pre-wrap", margin: 0 }}>
-                    {JSON.stringify(result.extracted, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

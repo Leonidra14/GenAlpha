@@ -7,12 +7,17 @@ import TeacherMainPage from "./pages/TeacherMainPage";
 import TeacherRegister from "./pages/TeacherRegister";
 import TeacherClassDetail from "./pages/TeacherClassDetail";
 import TeacherTopicDetail from "./pages/TeacherTopicDetail";
+import StudentLogin from "./pages/StudentLogin";
+import StudentMainPage from "./pages/StudentMainPage";
+import StudentClassDetail from "./pages/StudentClassDetail";
+
 
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Teacher */}
         <Route path="/" element={<RoleSelect />} />
         <Route path="/teacher/login" element={<TeacherLogin />} />
         <Route path="/teacher/register" element={<TeacherRegister />} />
@@ -27,6 +32,11 @@ export default function App() {
             </RequireAuth>
           }
         />
+        {/* Student */}
+        <Route path="/student/login" element={<StudentLogin />} />
+        <Route path="/student" element={<RequireAuth><StudentMainPage /></RequireAuth>} />
+        <Route path="/student/classes/:classId" element={<StudentClassDetail />} />
+
       </Routes>
     </BrowserRouter>
   );

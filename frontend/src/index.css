@@ -66,3 +66,37 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* ===== Scrollbar pro MODAL a všechno uvnitř ===== */
+
+/* Firefox */
+.gaModal,
+.gaModal * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120,130,180,0.55) rgba(255,255,255,0.35);
+}
+
+/* Chrome / Edge / Safari */
+.gaModal::-webkit-scrollbar,
+.gaModal *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.gaModal::-webkit-scrollbar-track,
+.gaModal *::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.35);
+  border-radius: 999px;
+}
+
+.gaModal::-webkit-scrollbar-thumb,
+.gaModal *::-webkit-scrollbar-thumb {
+  background: rgba(120,130,180,0.40);
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.35);
+}
+
+.gaModal::-webkit-scrollbar-thumb:hover,
+.gaModal *::-webkit-scrollbar-thumb:hover {
+  background: rgba(120,130,180,0.55);
+}

@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../api/client";
 import "./TeacherLogin.css";
 
+// assets – uprav názvy/cesty podle sebe
 import logo from "../assets/logo.png";
 import teacherIllustration from "../assets/teacher2.png";
 import clouds from "../assets/clouds.png";
@@ -10,7 +11,7 @@ import labs from "../assets/lab_books.png";
 import star from "../assets/star.png";
 import flight from "../assets/flight.png";
 
-// deterministic random (stejné jako u loginu)
+// deterministic random (aby to neskákalo po každém renderu)
 function mulberry32(seed) {
   return function () {
     let t = (seed += 0x6d2b79f5);
@@ -20,35 +21,43 @@ function mulberry32(seed) {
   };
 }
 
-export default function TeacherRegister() {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+export default function StudentLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const nav = useNavigate();
 
-  // ⭐✈️ random dekorace (STEJNÉ jako login)
   const randomDecos = useMemo(() => {
     const rand = mulberry32(77);
-    const starsCount = 16 + Math.floor(rand() * 10);
-    const flightsCount = 6 + Math.floor(rand() * 5);
+
+    const starsCount = 50
+    const flightsCount = 5
+
     const items = [];
 
     const add = (count, type) => {
       for (let i = 0; i < count; i++) {
+        const left = `${Math.round(rand() * 100)}%`;
+        const top = `${Math.round(rand() * 85)}%`;
+
+        const scale = type === "star"
+          ? 0.6 + rand() * 0.9
+          : 0.75 + rand() * 0.7;
+
+        const rotate = (rand() * 30 - 15).toFixed(1);
+        const opacity = (0.18 + rand() * 0.35).toFixed(2);
+
         items.push({
           id: `${type}-${i}`,
           type,
           src: type === "star" ? star : flight,
           style: {
-            left: `${Math.round(rand() * 100)}%`,
-            top: `${Math.round(rand() * 85)}%`,
-            opacity: 0.18 + rand() * 0.35,
-            transform: `translate(-50%, -50%) scale(${0.6 + rand()}) rotate(${rand() * 30 - 15}deg)`,
+            left,
+            top,
+            opacity,
+            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotate}deg)`,
           },
         });
       }
@@ -56,53 +65,66 @@ export default function TeacherRegister() {
 
     add(starsCount, "star");
     add(flightsCount, "flight");
+
     return items;
   }, []);
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+const onSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const data = await apiFetch("/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-          first_name: firstName,
-          last_name: lastName,
-          email,
-          password,
-        }),
-      });
+  try {
+    const data = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
 
-      localStorage.setItem("access_token", data.access_token);
-      nav("/teacher");
-    } catch (err) {
-      console.error(err);
-      setError(err?.message || "Registrace se nepovedla.");
-    } finally {
-      setLoading(false);
+    localStorage.setItem("access_token", data.access_token);
+    nav("/student");
+  } catch (err) {
+    console.error(err);
+
+    const msg = err?.message?.toLowerCase() || "";
+
+    if (msg.includes("invalid") || msg.includes("credential")) {
+      setError("Chybně zadaný email nebo heslo.");
+    } else {
+      setError(err?.message || "Přihlášení se nepovedlo.");
     }
-  };
+  } finally {
+    setLoading(false); // ✅ tohle ti chybělo
+  }
+};
 
   return (
     <div className="tloginPage">
-      {/* pozadí */}
-      <img className="tloginDec tloginClouds" src={clouds} alt="" />
+      {/* dekorace pozadí */}
+      <img
+        className="tloginDec tloginClouds"
+        src={clouds}
+        alt=""
+        aria-hidden="true"
+      />
 
+      {/* random hvězdy/letadla */}
       {randomDecos.map((d) => (
         <img
           key={d.id}
-          className={`tloginDec tloginRand ${
-            d.type === "flight" ? "tloginRandFlight" : "tloginRandStar"
-          }`}
+          className={`tloginDec tloginRand ${d.type === "flight" ? "tloginRandFlight" : "tloginRandStar"}`}
           src={d.src}
-          style={d.style}
           alt=""
+          aria-hidden="true"
+          style={d.style}
         />
       ))}
 
-      <img className="tloginDec tloginLabs" src={labs} alt="" />
+      <img
+        className="tloginDec tloginLabs"
+        src={labs}
+        alt=""
+        aria-hidden="true"
+      />
 
       <div className="tloginWrap">
         <div className="tloginHeader">
@@ -110,9 +132,9 @@ export default function TeacherRegister() {
         </div>
 
         <div className="tloginCard">
-          <h1 className="tloginTitle">Registrace učitele</h1>
+          <h1 className="tloginTitle">Přihlášení studenta</h1>
 
-          {/* učitel nalepený na kartě */}
+          {/* 👇 učitel nalepený na kartě */}
           <img
             className="tloginTeacher"
             src={teacherIllustration}
@@ -122,29 +144,9 @@ export default function TeacherRegister() {
 
           <form className="tloginForm" onSubmit={onSubmit}>
             <label className="tloginField">
-              <span className="tloginIcon">👤</span>
-              <input
-                className="tloginInput"
-                placeholder="Jméno"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                disabled={loading}
-              />
-            </label>
-
-            <label className="tloginField">
-              <span className="tloginIcon">👤</span>
-              <input
-                className="tloginInput"
-                placeholder="Příjmení"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                disabled={loading}
-              />
-            </label>
-
-            <label className="tloginField">
-              <span className="tloginIcon">✉️</span>
+              <span className="tloginIcon" aria-hidden="true">
+                ✉️
+              </span>
               <input
                 className="tloginInput"
                 placeholder="Email"
@@ -156,28 +158,23 @@ export default function TeacherRegister() {
             </label>
 
             <label className="tloginField">
-              <span className="tloginIcon">🔒</span>
+              <span className="tloginIcon" aria-hidden="true">
+                🔒
+              </span>
               <input
                 className="tloginInput"
                 type="password"
-                placeholder="Heslo (8–72 znaků)"
+                placeholder="Heslo"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                autoComplete="new-password"
+                autoComplete="current-password"
               />
             </label>
 
             <button className="tloginBtn" type="submit" disabled={loading}>
-              {loading ? "Registruji..." : "Registrovat"}
+              {loading ? "Přihlašuji..." : "Přihlásit"}
             </button>
-
-            <div className="tloginLinks">
-              <span>Už máš účet?</span>{" "}
-              <Link to="/teacher/login" className="tloginLink">
-                Přihlásit se
-              </Link>
-            </div>
 
             <button
               type="button"

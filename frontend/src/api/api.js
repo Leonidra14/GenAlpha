@@ -104,3 +104,54 @@ export function regenerateNotes(classId, topicId, payload) {
   });
 }
 
+export function saveFinalTeacherNotes(classId, topicId, teacher_notes_md) {
+  return apiFetch(`/classes/${classId}/topics/${topicId}/final-notes`, {
+    method: "PATCH",
+    body: JSON.stringify({ teacher_notes_md }),
+  });
+}
+
+export function saveFinalStudentNotes(classId, topicId, student_notes_md) {
+  return apiFetch(`/classes/${classId}/topics/${topicId}/final-notes`, {
+    method: "PATCH",
+    body: JSON.stringify({ student_notes_md }),
+  });
+}
+
+
+export function importTopic(classId, sourceTopicId) {
+  return apiFetch(`/classes/${classId}/topics/import`, {
+    method: "POST",
+    body: JSON.stringify({ source_topic_id: sourceTopicId }),
+  });
+}
+
+
+export function getFinalNotes(classId, topicId) {
+  return apiFetch(`/classes/${classId}/topics/${topicId}/final-notes`, {
+    method: "GET",
+  });
+}
+
+
+// ===== STUDENT VIEW =====
+export function getStudentClasses() {
+  return apiFetch("/classes/student/classes");
+}
+
+export function getStudentClassDetail(classId) {
+  return apiFetch(`/classes/student/classes/${classId}`);
+}
+
+export function getStudentClassTopics(classId) {
+  return apiFetch(`/classes/student/classes/${classId}/topics`);
+}
+
+export function setStudentTopicDone(topicId, done) {
+  return apiFetch(`/classes/student/topics/${topicId}/progress`, {
+    method: "PUT",
+    body: JSON.stringify({ done }),
+  });
+}
+
+

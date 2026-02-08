@@ -1,63 +1,56 @@
-// src/components/TeacherClassCard.jsx
 import React from "react";
 
 export default function TeacherClassCard({ classInfo, onOpen, onToggleActive }) {
-  const hasCustomName =
-    classInfo.custom_name && classInfo.custom_name.trim();
+  const hasCustomName = classInfo.custom_name && classInfo.custom_name.trim();
 
   const defaultTitle =
     classInfo.grade != null
       ? `${classInfo.grade}. třída – ${classInfo.subject}`
       : `Třída – ${classInfo.subject}`;
 
+  const title = hasCustomName ? classInfo.custom_name : defaultTitle;
+
   return (
     <div
-      className="class-card"
+      className={`ccard ${classInfo.active ? "" : "ccardInactive"}`}
       role="button"
+      tabIndex={0}
       onClick={onOpen}
-      style={{
-        cursor: "pointer",
-        opacity: classInfo.active ? 1 : 0.6,
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onOpen?.();
       }}
     >
-      {/* HLAVIČKA */}
-      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <div>
-          {/* Hlavní nadpis */}
-          {hasCustomName ? (
-            <h2 style={{ margin: 0 }}>{classInfo.custom_name}</h2>
-          ) : (
-            <h2 style={{ margin: 0 }}>{defaultTitle}</h2>
-          )}
-
-          {/* VŽDY zobrazit třídu a předmět */}
-          <div style={{ fontSize: 14, opacity: 0.7 }}>
-            Třída: {classInfo.grade ?? "—"}
-          </div>
-          <div style={{ fontSize: 14, opacity: 0.7 }}>
-            Předmět: {classInfo.subject}
-          </div>
-        </div>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation(); // zabrání otevření detailu
-            onToggleActive?.(classInfo);
-          }}
-        >
-          {classInfo.active ? "Deaktivovat" : "Aktivovat"}
-        </button>
+      <div className="ccardIcon" aria-hidden="true">
+        📚
       </div>
 
-      {/* OBSAH */}
-      <div style={{ marginTop: 10 }}>
-        <div>Studentů: {classInfo.num_students ?? 0}</div>
-
-        {classInfo.note && classInfo.note.trim() && (
-          <div style={{ marginTop: 6, opacity: 0.85 }}>
-            {classInfo.note}
+      <div className="ccardBody">
+        <div className="ccardTop">
+          <div className="ccardText">
+            <div className="ccardTitle">{title}</div>
+            <div className="ccardMeta">
+              <div>Předmět: {classInfo.subject}</div>
+              <div>Třída: {classInfo.grade ?? "—"}</div>
+            </div>
           </div>
-        )}
+
+          <button
+            className="ccardToggle"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleActive?.(classInfo);
+            }}
+          >
+            {classInfo.active ? "Deaktivovat" : "Aktivovat"}
+          </button>
+        </div>
+
+        <div className="ccardBottom">
+          <div className="ccardSmall">Studentů: {classInfo.num_students ?? 0}</div>
+          {classInfo.note && classInfo.note.trim() && (
+            <div className="ccardNote">{classInfo.note}</div>
+          )}
+        </div>
       </div>
     </div>
   );

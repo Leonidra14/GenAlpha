@@ -5,6 +5,31 @@
   text-align: center;
 }
 
+.gaScroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.gaScroll::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.35);
+  border-radius: 999px;
+}
+
+.gaScroll::-webkit-scrollbar-thumb {
+  background: rgba(120,130,180,0.40);
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,0.35);
+}
+
+.gaScroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(120,130,180,0.55);
+}
+
+.gaScroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120,130,180,0.55) rgba(255,255,255,0.35);
+}
+
+
 .logo {
   height: 6em;
   padding: 1.5em;

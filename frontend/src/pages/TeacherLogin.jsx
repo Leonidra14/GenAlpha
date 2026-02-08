@@ -1,6 +1,25 @@
-import { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../api/client";
+import "./TeacherLogin.css";
+
+// assets – uprav názvy/cesty podle sebe
+import logo from "../assets/logo.png";
+import teacherIllustration from "../assets/teacher2.png";
+import clouds from "../assets/clouds.png";
+import labs from "../assets/lab_books.png";
+import star from "../assets/star.png";
+import flight from "../assets/flight.png";
+
+// deterministic random (aby to neskákalo po každém renderu)
+function mulberry32(seed) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 export default function TeacherLogin() {
   const [email, setEmail] = useState("");
@@ -10,63 +29,173 @@ export default function TeacherLogin() {
 
   const nav = useNavigate();
 
-  const onSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const randomDecos = useMemo(() => {
+    const rand = mulberry32(77);
 
-    try {
-      // apiFetch teď vrací rovnou JSON data nebo vyhodí Error
-      const data = await apiFetch("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
+    const starsCount = 50
+    const flightsCount = 5
 
-      // očekáváme { access_token, token_type }
-      localStorage.setItem("access_token", data.access_token);
-      nav("/teacher");
-    } catch (err) {
-      console.error(err);
+    const items = [];
+
+    const add = (count, type) => {
+      for (let i = 0; i < count; i++) {
+        const left = `${Math.round(rand() * 100)}%`;
+        const top = `${Math.round(rand() * 85)}%`;
+
+        const scale = type === "star"
+          ? 0.6 + rand() * 0.9
+          : 0.75 + rand() * 0.7;
+
+        const rotate = (rand() * 30 - 15).toFixed(1);
+        const opacity = (0.18 + rand() * 0.35).toFixed(2);
+
+        items.push({
+          id: `${type}-${i}`,
+          type,
+          src: type === "star" ? star : flight,
+          style: {
+            left,
+            top,
+            opacity,
+            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotate}deg)`,
+          },
+        });
+      }
+    };
+
+    add(starsCount, "star");
+    add(flightsCount, "flight");
+
+    return items;
+  }, []);
+
+const onSubmit = async (e) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
+
+  try {
+    const data = await apiFetch("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+
+    localStorage.setItem("access_token", data.access_token);
+    nav("/teacher");
+  } catch (err) {
+    console.error(err);
+
+    const msg = err?.message?.toLowerCase() || "";
+
+    if (msg.includes("invalid") || msg.includes("credential")) {
+      setError("Chybně zadaný email nebo heslo.");
+    } else {
       setError(err?.message || "Přihlášení se nepovedlo.");
-    } finally {
-      setLoading(false);
     }
-  };
+  } finally {
+    setLoading(false); // ✅ tohle ti chybělo
+  }
+};
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1>Přihlášení učitele</h1>
+    <div className="tloginPage">
+      {/* dekorace pozadí */}
+      <img
+        className="tloginDec tloginClouds"
+        src={clouds}
+        alt=""
+        aria-hidden="true"
+      />
 
-      <form onSubmit={onSubmit}>
-        <div style={{ marginBottom: 12 }}>
-          <input
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-          />
+      {/* random hvězdy/letadla */}
+      {randomDecos.map((d) => (
+        <img
+          key={d.id}
+          className={`tloginDec tloginRand ${d.type === "flight" ? "tloginRandFlight" : "tloginRandStar"}`}
+          src={d.src}
+          alt=""
+          aria-hidden="true"
+          style={d.style}
+        />
+      ))}
+
+      <img
+        className="tloginDec tloginLabs"
+        src={labs}
+        alt=""
+        aria-hidden="true"
+      />
+
+      <div className="tloginWrap">
+        <div className="tloginHeader">
+          <img className="tloginLogo" src={logo} alt="GenAlpha" />
         </div>
 
-        <div style={{ marginBottom: 12 }}>
-          <input
-            type="password"
-            placeholder="Heslo"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
+        <div className="tloginCard">
+          <h1 className="tloginTitle">Přihlášení učitele</h1>
+
+          {/* 👇 učitel nalepený na kartě */}
+          <img
+            className="tloginTeacher"
+            src={teacherIllustration}
+            alt=""
+            aria-hidden="true"
           />
+
+          <form className="tloginForm" onSubmit={onSubmit}>
+            <label className="tloginField">
+              <span className="tloginIcon" aria-hidden="true">
+                ✉️
+              </span>
+              <input
+                className="tloginInput"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                autoComplete="email"
+              />
+            </label>
+
+            <label className="tloginField">
+              <span className="tloginIcon" aria-hidden="true">
+                🔒
+              </span>
+              <input
+                className="tloginInput"
+                type="password"
+                placeholder="Heslo"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+                autoComplete="current-password"
+              />
+            </label>
+
+            <button className="tloginBtn" type="submit" disabled={loading}>
+              {loading ? "Přihlašuji..." : "Přihlásit"}
+            </button>
+
+            <div className="tloginLinks">
+              <span>Nemáš účet?</span>{" "}
+              <Link to="/teacher/register" className="tloginLink">
+                Zaregistrovat se
+              </Link>
+            </div>
+
+            <button
+              type="button"
+              className="tloginBack"
+              onClick={() => nav("/")}
+              disabled={loading}
+            >
+              ← Zpět na hlavní stránku
+            </button>
+
+            {error && <div className="tloginError">{error}</div>}
+          </form>
         </div>
-
-        <button type="submit" disabled={loading}>
-          {loading ? "Přihlašuji..." : "Přihlásit"}
-        </button>
-      </form>
-
-      <p style={{ marginTop: 12 }}>
-        Nemáš účet? <Link to="/teacher/register">Zaregistrovat se</Link>
-      </p>
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      </div>
     </div>
   );
 }

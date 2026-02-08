@@ -66,43 +66,86 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
     }
   }
 
+  // ✅ glass/light style
   const styles = {
     section: {
-      padding: 12,
-      borderRadius: 12,
-      border: "1px solid #2a2a2a",
-      background: "#141414",
+      padding: 14,
+      borderRadius: 18,
+      border: "1px solid rgba(90,120,255,0.18)",
+      background: "rgba(255,255,255,0.72)",
+      boxShadow:
+        "0 14px 28px rgba(26,52,160,0.10), inset 0 1px 0 rgba(255,255,255,0.65)",
+      backdropFilter: "blur(10px)",
       marginBottom: 12,
+      color: "rgba(35,36,58,0.92)",
     },
-    label: { display: "block", fontSize: 12, opacity: 0.8, marginBottom: 6 },
+    label: {
+      display: "block",
+      fontSize: 12,
+      color: "rgba(35,36,58,0.65)",
+      marginBottom: 6,
+      fontWeight: 800,
+    },
     input: {
       width: "100%",
       padding: "10px 12px",
-      borderRadius: 10,
-      border: "1px solid #2b2b2b",
-      background: "#0f0f0f",
-      color: "#fff",
+      borderRadius: 14,
+      border: "1px solid rgba(120,130,180,0.22)",
+      background: "rgba(255,255,255,0.78)",
+      color: "rgba(35,36,58,0.92)",
       outline: "none",
       boxSizing: "border-box",
+      boxShadow: "0 10px 18px rgba(60,80,190,0.08)",
     },
-    btn: {
+    row2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
+
+    // buttons
+    btnGhost: {
       padding: "10px 12px",
-      borderRadius: 10,
-      border: "1px solid #2b2b2b",
-      background: "#1b1b1b",
+      borderRadius: 12,
+      border: "1px solid rgba(130,140,190,0.30)",
+      background: "rgba(255,255,255,0.65)",
+      color: "rgba(35,36,58,0.78)",
+      cursor: "pointer",
+      fontWeight: 900,
+      boxShadow: "0 10px 18px rgba(60,80,190,0.10)",
+      whiteSpace: "nowrap",
+    },
+    btnPrimary: {
+      padding: "10px 12px",
+      borderRadius: 12,
+      border: 0,
+      background: "linear-gradient(90deg, #3f6bff, #6a5cff)",
       color: "#fff",
       cursor: "pointer",
+      fontWeight: 900,
+      boxShadow: "0 16px 26px rgba(63,107,255,0.22)",
+      whiteSpace: "nowrap",
     },
+
     error: {
       marginTop: 10,
       padding: 10,
-      borderRadius: 10,
-      border: "1px solid #5a1f1f",
-      background: "#2a1111",
-      color: "#fff",
+      borderRadius: 14,
+      border: "1px solid rgba(255,120,120,0.35)",
+      background: "rgba(255,230,230,0.75)",
+      color: "rgba(150,20,20,0.95)",
       fontSize: 13,
+      fontWeight: 800,
     },
-    row2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
+
+    // checkbox row
+    checkRow: {
+      marginTop: 10,
+      display: "flex",
+      alignItems: "center",
+      gap: 10,
+      padding: 10,
+      borderRadius: 14,
+      border: "1px solid rgba(120,130,180,0.18)",
+      background: "rgba(255,255,255,0.55)",
+    },
+    checkText: { color: "rgba(35,36,58,0.78)", fontWeight: 800 },
   };
 
   return (
@@ -118,6 +161,7 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
                 onChange={(e) => setGrade(e.target.value)}
                 inputMode="numeric"
                 placeholder="Např. 5"
+                disabled={loading}
               />
             </div>
 
@@ -128,6 +172,7 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Např. Informatika"
+                disabled={loading}
               />
             </div>
           </div>
@@ -139,6 +184,7 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
               placeholder="Např. Bibecci"
+              disabled={loading}
             />
           </div>
 
@@ -149,27 +195,36 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Např. domácí úkoly…"
+              disabled={loading}
             />
           </div>
 
-          <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={styles.checkRow}>
             <input
               type="checkbox"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
+              disabled={loading}
+              style={{ width: 18, height: 18 }}
             />
-            <div style={{ opacity: 0.85 }}>Třída je aktivní</div>
+            <div style={styles.checkText}>Třída je aktivní</div>
           </div>
 
           {err && <div style={styles.error}>{err}</div>}
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
-          <button type="button" style={styles.btn} onClick={onClose} disabled={loading}>
+          <button
+            type="button"
+            style={styles.btnGhost}
+            onClick={onClose}
+            disabled={loading}
+          >
             Zrušit
           </button>
-          <button type="submit" style={styles.btn} disabled={loading}>
-            Uložit
+
+          <button type="submit" style={styles.btnPrimary} disabled={loading}>
+            {loading ? "Ukládám..." : "Uložit"}
           </button>
         </div>
       </form>

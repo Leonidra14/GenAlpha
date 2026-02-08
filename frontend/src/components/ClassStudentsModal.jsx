@@ -157,83 +157,99 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
     }
   }
 
+  // ✅ světlé/glass styly (ladí s tcd designem)
   const styles = {
     section: {
-      padding: 12,
-      borderRadius: 12,
-      border: "1px solid #2a2a2a",
-      background: "#141414",
+      padding: 14,
+      borderRadius: 18,
+      border: "1px solid rgba(90,120,255,0.18)",
+      background: "rgba(255,255,255,0.72)",
+      boxShadow:
+        "0 14px 28px rgba(26,52,160,0.10), inset 0 1px 0 rgba(255,255,255,0.65)",
+      backdropFilter: "blur(10px)",
       marginBottom: 12,
+      color: "rgba(35,36,58,0.92)",
     },
-    h2: { margin: 0, marginBottom: 10, fontSize: 18 },
-    label: { display: "block", fontSize: 12, opacity: 0.8, marginBottom: 6 },
+    h2: { margin: 0, marginBottom: 10, fontSize: 18, fontWeight: 900, color: "rgba(35,36,58,0.85)" },
+    label: { display: "block", fontSize: 12, color: "rgba(35,36,58,0.65)", marginBottom: 6, fontWeight: 800 },
     input: {
       width: "100%",
       padding: "10px 12px",
-      borderRadius: 10,
-      border: "1px solid #2b2b2b",
-      background: "#0f0f0f",
-      color: "#fff",
+      borderRadius: 14,
+      border: "1px solid rgba(120,130,180,0.22)",
+      background: "rgba(255,255,255,0.78)",
+      color: "rgba(35,36,58,0.92)",
       outline: "none",
       boxSizing: "border-box",
+      boxShadow: "0 10px 18px rgba(60,80,190,0.08)",
     },
     row2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
+
     btn: {
       padding: "10px 12px",
-      borderRadius: 10,
-      border: "1px solid #2b2b2b",
-      background: "#1b1b1b",
+      borderRadius: 12,
+      border: 0,
+      background: "linear-gradient(90deg, #3f6bff, #6a5cff)",
       color: "#fff",
       cursor: "pointer",
       minWidth: 108,
+      fontWeight: 900,
+      boxShadow: "0 16px 26px rgba(63,107,255,0.22)",
+      whiteSpace: "nowrap",
     },
     btnSmall: {
       padding: "8px 10px",
-      borderRadius: 10,
-      border: "1px solid #2b2b2b",
-      background: "#1b1b1b",
-      color: "#fff",
+      borderRadius: 12,
+      border: "1px solid rgba(130,140,190,0.30)",
+      background: "rgba(255,255,255,0.65)",
+      color: "rgba(35,36,58,0.78)",
       cursor: "pointer",
+      fontWeight: 900,
+      whiteSpace: "nowrap",
+      boxShadow: "0 10px 18px rgba(60,80,190,0.10)",
     },
     btnDanger: {
       padding: "8px 10px",
-      borderRadius: 10,
-      border: "1px solid #5a1f1f",
-      background: "#2a1111",
+      borderRadius: 999,
+      border: 0,
+      background: "linear-gradient(90deg, #ff7aa8, #ff6a8a)",
       color: "#fff",
       cursor: "pointer",
+      fontWeight: 900,
+      whiteSpace: "nowrap",
     },
 
     table: { width: "100%", borderCollapse: "collapse" },
-    theadTr: { borderTop: "1px solid #222", borderBottom: "1px solid #222" },
+    theadTr: { borderBottom: "1px solid rgba(120,130,180,0.18)" },
     th: {
       textAlign: "left",
       padding: "10px 6px",
       fontSize: 12,
-      opacity: 0.75,
-      fontWeight: 700,
+      color: "rgba(35,36,58,0.55)",
+      fontWeight: 900,
     },
-    tr: { borderTop: "1px solid #222" },
-    td: { padding: "10px 6px", verticalAlign: "middle", fontSize: 14 },
+    tr: { borderTop: "1px solid rgba(120,130,180,0.12)" },
+    td: { padding: "10px 6px", verticalAlign: "middle", fontSize: 14, color: "rgba(35,36,58,0.78)" },
 
-    // scroll area for "available students" list
     scrollBox: {
       marginTop: 10,
-      maxHeight: 170, // cca 2 řádky + hlavička (uprav dle potřeby)
+      maxHeight: 170,
       overflowY: "auto",
-      borderRadius: 10,
-      border: "1px solid #222",
+      borderRadius: 14,
+      border: "1px solid rgba(120,130,180,0.18)",
+      background: "rgba(255,255,255,0.55)",
     },
 
-    muted: { opacity: 0.7, fontSize: 12 },
+    muted: { color: "rgba(35,36,58,0.55)", fontSize: 12 },
     error: {
       marginTop: 10,
       padding: 10,
-      borderRadius: 10,
-      border: "1px solid #5a1f1f",
-      background: "#2a1111",
-      color: "#fff",
+      borderRadius: 14,
+      border: "1px solid rgba(255,120,120,0.35)",
+      background: "rgba(255,230,230,0.75)",
+      color: "rgba(150,20,20,0.95)",
       fontSize: 13,
+      fontWeight: 800,
     },
   };
 
@@ -272,7 +288,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                   <td style={styles.td}>{s.email || "bez e-mailu"}</td>
 
                   <td style={{ ...styles.td, textAlign: "right" }}>
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
                       <button
                         style={styles.btnSmall}
                         type="button"
@@ -302,14 +318,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                           onChange={(e) => setNewPw(e.target.value)}
                           placeholder="Zadej nové heslo"
                         />
-                        <div
-                          style={{
-                            display: "flex",
-                            gap: 8,
-                            marginTop: 8,
-                            justifyContent: "flex-end",
-                          }}
-                        >
+                        <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
                           <button
                             style={styles.btnSmall}
                             type="button"
@@ -348,25 +357,16 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
         <h2 style={styles.h2}>Přidat existujícího studenta</h2>
 
         <div style={styles.label}>Hledat (jméno / příjmení / e-mail / user ID)</div>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <input
             style={styles.input}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="např. Novák, student@email.cz nebo 14"
           />
-          <button
-            style={styles.btn}
-            type="button"
-            disabled={loading}
-            onClick={() => loadAvailable(search)}
-          >
+          <button style={styles.btn} type="button" disabled={loading} onClick={() => loadAvailable(search)}>
             🔎 Hledat
           </button>
-        </div>
-
-        <div style={{ marginTop: 10, ...styles.muted }}>
-          Zobrazuji studenty, kteří existují, ale nejsou zapsaní v této třídě.
         </div>
 
         {!loading && available.length === 0 && (
@@ -374,7 +374,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
         )}
 
         {!loading && available.length > 0 && (
-          <div style={styles.scrollBox}>
+        <div className="gaScroll" style={styles.scrollBox}>
             <table style={styles.table}>
               <thead>
                 <tr style={styles.theadTr}>
@@ -395,12 +395,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                     <td style={styles.td}>{s.email || "bez e-mailu"}</td>
 
                     <td style={{ ...styles.td, textAlign: "right" }}>
-                      <button
-                        style={styles.btnSmall}
-                        type="button"
-                        disabled={loading}
-                        onClick={() => handleEnrollExisting(s.id)}
-                      >
+                      <button style={styles.btnSmall} type="button" disabled={loading} onClick={() => handleEnrollExisting(s.id)}>
                         ➕ Zapsat
                       </button>
                     </td>
@@ -415,6 +410,9 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
       {/* CREATE + ENROLL */}
       <div style={styles.section}>
         <h2 style={styles.h2}>Vytvořit a zapsat nového studenta</h2>
+        <div style={{ marginTop: 10, ...styles.muted }}>
+          Před vytvořením se ujisti, že tento student ještě nemá účet. Pokud ano, můžete ho jednoduše zapsat pomocí předchozího formuláře. 
+        </div>
 
         <form onSubmit={handleCreateAndEnroll}>
           <div style={styles.row2}>

@@ -1,0 +1,134 @@
+.ccmForm{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 2 sloupce jako u tebe */
+.ccmRow2{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 720px){
+  .ccmRow2{ grid-template-columns: 1fr; }
+}
+
+.ccmLabel{
+  display: block;
+  font-size: 12px;
+  color: rgba(35,36,58,0.72);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.ccmHint{
+  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(35,36,58,0.55);
+}
+
+.ccmBlock{
+  margin-top: 2px;
+}
+
+/* input container (stejný styl jako login field) */
+.ccmField{
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(120,130,180,0.22);
+  box-shadow: 0 10px 18px rgba(60,80,190,0.08);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ccmIcon{
+  width: 22px;
+  opacity: .65;
+}
+
+.ccmInput{
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: rgba(35,36,58,0.9);
+  min-width: 10px;
+}
+
+.ccmInput::placeholder{
+  color: rgba(35,36,58,0.45);
+}
+
+.ccmInput:disabled{
+  opacity: .7;
+  cursor: not-allowed;
+}
+
+.ccmCheckRow{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  color: rgba(35,36,58,0.75);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.ccmCheckbox{
+  width: 16px;
+  height: 16px;
+}
+
+/* error jako u loginu */
+.ccmError{
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 230, 230, 0.75);
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  color: rgba(150, 20, 20, 0.95);
+  font-size: 13px;
+}
+
+/* buttons */
+.ccmActions{
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ccmBtn{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-weight: 800;
+  cursor: pointer;
+  border: 0;
+}
+
+.ccmBtn.primary{
+  color: #fff;
+  background: linear-gradient(90deg, #3f6bff, #6a5cff);
+  box-shadow: 0 16px 26px rgba(63,107,255,0.22);
+}
+
+.ccmBtn.ghost{
+  background: rgba(245,246,255,0.75);
+  border: 1px solid rgba(130,140,190,0.30);
+  color: rgba(35,36,58,0.75);
+}
+
+.ccmBtn:disabled{
+  opacity: .75;
+  cursor: not-allowed;
+  box-shadow: none;
+}
