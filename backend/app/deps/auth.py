@@ -33,3 +33,8 @@ def require_teacher(user: User = Depends(get_current_user)) -> User:
     if user.role != "teacher":
         raise HTTPException(status_code=403, detail="Teacher role required")
     return user
+
+def require_student(user: User = Depends(get_current_user)) -> User:
+    if user.role != "student":
+        raise HTTPException(status_code=403, detail="Student role required")
+    return user

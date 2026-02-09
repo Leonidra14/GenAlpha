@@ -10,12 +10,12 @@ from routers.enrollments import router as enrollments_router
 from routers import note_generation as note_generation_router
 from routers import topic_notes as topic_notes_router
 
-# import modelů kvůli registraci v Base
-from models.users import User  # noqa
-from models.classes import Class  # noqa
-from models.enrollments import Enrollment  # noqa
-from models.topics import Topic  # noqa
-from models.enrollments import Enrollment  # noqa
+from models.users import User  
+from models.classes import Class  
+from models.enrollments import Enrollment  
+from models.topics import Topic  
+from models.enrollments import Enrollment  
+from models.topic_progress import TopicProgress
 
 
 
@@ -53,6 +53,7 @@ app.include_router(enrollments_router, prefix="/classes", tags=["enrollments"])
 app.include_router(note_generation_router.router, tags=["note_generation"])
 # router pro ukládání finálních poznámek
 app.include_router(topic_notes_router.router, tags=["topic-notes"])
+
 
 
 

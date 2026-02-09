@@ -22,3 +22,15 @@ class StudentPasswordUpdate(BaseModel):
     password: str = Field(min_length=8, max_length=72)
 
 
+class StudentClassDetailOut(BaseModel):
+    id: int
+    subject: str
+    grade: Optional[int] = None
+    custom_name: Optional[str] = None
+    note: Optional[str] = None
+    active: bool
+
+    teacher_first_name: Optional[str] = None
+    teacher_last_name: Optional[str] = None
+
+

@@ -68,6 +68,7 @@ def teacher_notes_system() -> str:
         "Vytvoř plán hodiny a teoretickou přípravu pro učitele. "
         "KRITICKÉ: Používej pouze fakta a letopočty z EXTRACTED METADATA. "
         "Nepřidávej nové roky. "
+        "NEPŘIDÁVEJ žádná varování, upozornění ani meta-komentáře o pravidlech. "
         "Piš česky, strukturovaně, v markdown."
     )
 
@@ -149,88 +150,56 @@ def student_notes_user(
     - 5 kontrolních otázek
     """.strip()
 
-
 def teacher_regen_system() -> str:
     return (
-        "Jsi didaktický asistent. Přepíšeš učitelské poznámky podle uživatelské poznámky. "
-        "KRITICKÉ: Nehalucinuj. Používej pouze fakta/letopočty z EXTRACTED METADATA. "
-        "Zachovej stejnou strukturu a nadpisy jako původní učitelské poznámky. "
-        "Piš česky, v markdown."
+        "Jsi didaktický asistent. Přepisuješ UČITELSKÉ poznámky podle uživatelské poznámky.\n"
+        "Piš česky a vracej čistý Markdown.\n"
+        "DŮLEŽITÉ: Jediný zdroj informací a faktů je text, který upravuješ (CURRENT_MD).\n"
+        "Nevymýšlej žádná nová fakta, letopočty ani jména, která nejsou v CURRENT_MD. Pokud to uživatel přímo nevyžaduje.\n"
     )
 
 
-def teacher_regen_user(
-    *,
-    subject: str,
-    grade: int,
-    chapter_title: str,
-    duration_minutes: int,
-    extracted_dump: dict,
-    raw_text: str,
-    current_md: str,
-    user_note: str,
-) -> str:
-    return f"""
-    META:
-    - PŘEDMĚT: {subject}
-    - ROČNÍK: {grade}
-    - TÉMA: {chapter_title}
-    - DÉLKA: {duration_minutes} minut
-
-    EXTRACTED METADATA (jediný zdroj fakt/letopočtů):
-    {extracted_dump}
-
-    PŮVODNÍ TEXT UČITELE:
-    {raw_text}
-
-    AKTUÁLNÍ UČITELSKÉ POZNÁMKY (tohle uprav):
+def teacher_regen_user(*, current_md: str, user_note: str) -> str:
+        return f"""
+    AKTUÁLNÍ UČITELSKÉ POZNÁMKY (JEDINÝ ZDROJ; tohle uprav):
+    ---
     {current_md}
+    ---
 
     UŽIVATELSKÁ POZNÁMKA (pokyny k úpravě):
+    ---
     {user_note}
+    ---
 
     POŽADAVKY:
-    - Vrať kompletní přepsaný text.
-    - Zachovej markdown strukturu a stejné nadpisy.
-    - Pokud uživatelská poznámka žádá něco mimo fakta (např. nové roky), ignoruj to a drž se metadata.
+    - Vrať kompletní přepsaný text (celý dokument).
+    - Zachovej stejnou strukturu a nadpisy jako v CURRENT_MD (jen uprav obsah podle pokynů).
+    - Nezaváděj nové fakta (žádné nové roky/jména/události mimo CURRENT_MD) pokud je uživatel nevyžaduje.
     """.strip()
-
 
 def student_regen_system() -> str:
     return (
-        "Jsi nejlepší zapisovatel. Přepíšeš studentské poznámky podle uživatelské poznámky. "
-        "KRITICKÉ: Nehalucinuj. Nepřidávej nové letopočty mimo EXTRACTED METADATA. "
-        "Piš česky, v markdown."
+        "Jsi nejlepší zapisovatel. Přepisuješ STUDENTSKÉ poznámky podle uživatelské poznámky.\n"
+        "Piš česky a vracej čistý Markdown.\n"
+        "DŮLEŽITÉ: Jediný zdroj informací a faktů je text, který upravuješ (CURRENT_MD).\n"
+        "Nevymýšlej žádná nová fakta, letopočty ani jména, která nejsou v CURRENT_MD. Pokud to uživatel přímo nevyžaduje.\n"
     )
 
 
-def student_regen_user(
-    *,
-    grade: int,
-    chapter_title: str,
-    extracted_dump: dict,
-    raw_text: str,
-    current_md: str,
-    user_note: str,
-) -> str:
+def student_regen_user(*, current_md: str, user_note: str) -> str:
     return f"""
-    ROČNÍK: {grade}
-    TÉMA: {chapter_title}
-
-    EXTRACTED METADATA (jediný zdroj fakt/letopočtů):
-    {extracted_dump}
-
-    PŮVODNÍ TEXT UČITELE:
-    {raw_text}
-
-    AKTUÁLNÍ STUDENTSKÉ POZNÁMKY (tohle uprav):
+    AKTUÁLNÍ STUDENTSKÉ POZNÁMKY (JEDINÝ ZDROJ; tohle uprav):
+    ---
     {current_md}
+    ---
 
     UŽIVATELSKÁ POZNÁMKA:
+    ---
     {user_note}
+    ---
 
     POŽADAVKY:
     - Vrať kompletní přepsaný text.
-    - Vynech aktivity (studentské poznámky).
-    - Max cca 25 řádků (pokud uživatel nechce jinak).
+    - Zachovej markdown strukturu z CURRENT_MD (nadpisy/sekce).
+    - Když je v CURRENT_MD část pro učitele (metodika/poznámky pro učitele), zjednoduš ji pro žáka nebo ji vynech.
     """.strip()

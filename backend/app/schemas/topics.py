@@ -22,3 +22,6 @@ class TopicCreate(BaseModel):
 class TopicUpdate(BaseModel):
     title: Optional[str] = None
     active: Optional[bool] = None
+
+class TopicImport(BaseModel):
+    source_topic_id: int

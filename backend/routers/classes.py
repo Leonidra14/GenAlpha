@@ -1,15 +1,26 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
+from sqlalchemy import and_
+from datetime import datetime
+
 
 from database.database import get_db
 from models.users import User
 from models.classes import Class
-from app.deps.auth import require_teacher
+from app.deps.auth import require_teacher, require_student
 from app.schemas.classes import ClassOut, ClassUpdate
 from models.enrollments import Enrollment
 from app.schemas.students import StudentOut
 from app.schemas.classes import ClassCreate
+from models.topics import Topic
+from app.schemas.topics import TopicOut
+from models.topic_progress import TopicProgress
+from app.schemas.students import StudentClassDetailOut
+from app.schemas.topic_progress import TopicWithProgressOut, TopicProgressUpdateIn
+
+
+
 
 router = APIRouter(tags=["classes"])
 
@@ -156,3 +167,122 @@ def create_class(
         pass
 
     return cls
+
+
+# ==========================
+# STUDENT ENDPOINTS
+# ==========================
+
+@router.get("/student/classes", response_model=List[ClassOut])
+def student_classes_me(user=Depends(require_student), db: Session = Depends(get_db)):
+    classes = (
+        db.query(Class)
+        .join(Enrollment, Enrollment.class_id == Class.id)
+        .filter(Enrollment.student_id == user.id)
+        .options(joinedload(Class.enrollments))
+        .all()
+    )
+    return [to_class_out(cl) for cl in classes]
+
+
+@router.get("/student/classes/{class_id}", response_model=StudentClassDetailOut)
+def student_class_detail(class_id: int, user=Depends(require_student), db: Session = Depends(get_db)):
+    # musí být zapsaný
+    enr = db.query(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.student_id == user.id
+    ).first()
+    if not enr:
+        raise HTTPException(status_code=403, detail="Not enrolled in this class")
+
+    cl = db.query(Class).filter(Class.id == class_id).first()
+    if not cl:
+        raise HTTPException(status_code=404, detail="Class not found")
+
+    teacher = db.query(User).filter(User.id == cl.teacher_id).first()
+
+    return StudentClassDetailOut(
+        id=cl.id,
+        subject=cl.subject,
+        grade=cl.grade,
+        custom_name=cl.custom_name,
+        note=cl.note,
+        active=bool(cl.active),
+        teacher_first_name=getattr(teacher, "first_name", None),
+        teacher_last_name=getattr(teacher, "last_name", None),
+    )
+
+
+@router.get("/student/classes/{class_id}/topics", response_model=List[TopicWithProgressOut])
+def student_class_topics(class_id: int, user=Depends(require_student), db: Session = Depends(get_db)):
+    enr = db.query(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.student_id == user.id
+    ).first()
+    if not enr:
+        raise HTTPException(status_code=403, detail="Not enrolled in this class")
+
+    rows = (
+        db.query(Topic, TopicProgress)
+        .outerjoin(
+            TopicProgress,
+            and_(
+                TopicProgress.topic_id == Topic.id,
+                TopicProgress.student_id == user.id,
+            )
+        )
+        .filter(Topic.class_id == class_id, Topic.active == True)
+        .order_by(Topic.created_at.asc(), Topic.id.asc())
+        .all()
+    )
+
+    out = []
+    for topic, prog in rows:
+        out.append(
+            TopicWithProgressOut(
+                id=topic.id,
+                title=topic.title,
+                active=topic.active,
+                created_at=topic.created_at,
+                class_id=topic.class_id,
+                done=bool(prog.done) if prog else False,
+                last_opened_at=prog.last_opened_at if prog else None,
+            )
+        )
+
+    return out
+
+@router.put("/student/topics/{topic_id}/progress", response_model=dict)
+def student_set_topic_done(
+    topic_id: int,
+    payload: TopicProgressUpdateIn,
+    user=Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    topic = db.query(Topic).filter(Topic.id == topic_id).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+
+    # student musí být zapsaný v topic.class_id
+    enr = db.query(Enrollment).filter(
+        Enrollment.class_id == topic.class_id,
+        Enrollment.student_id == user.id
+    ).first()
+    if not enr:
+        raise HTTPException(status_code=403, detail="Not enrolled in this class")
+
+    prog = db.query(TopicProgress).filter(
+        TopicProgress.topic_id == topic_id,
+        TopicProgress.student_id == user.id
+    ).first()
+
+    if not prog:
+        prog = TopicProgress(topic_id=topic_id, student_id=user.id, done=bool(payload.done))
+        db.add(prog)
+    else:
+        prog.done = bool(payload.done)
+
+    db.commit()
+    return {"ok": True, "done": bool(payload.done)}
+
+

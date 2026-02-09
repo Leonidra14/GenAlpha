@@ -17,4 +17,3 @@ class User(Base):
     # vztahy
     classes = relationship("Class", back_populates="teacher")
     enrollments = relationship("Enrollment", back_populates="student")
-    # NECHÁVÁME BEZ Result a Activity, dokud ty modely neexistují

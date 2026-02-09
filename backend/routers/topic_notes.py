@@ -5,7 +5,7 @@ from database.database import get_db
 from app.deps.auth import require_teacher
 from models.classes import Class
 from models.topics import Topic
-from app.schemas.topic_notes import FinalNotesPatchIn  # uprav import dle cesty
+from app.schemas.topic_notes import FinalNotesPatchIn, FinalNotesOut  # ✅ přidán FinalNotesOut
 
 router = APIRouter()
 
@@ -28,6 +28,29 @@ def _assert_teacher_owns_topic(db: Session, class_id: int, topic_id: int, teache
     return topic
 
 
+@router.get("/classes/{class_id}/topics/{topic_id}/final-notes", response_model=FinalNotesOut)
+def get_final_notes(
+    class_id: int,
+    topic_id: int,
+    db: Session = Depends(get_db),
+    user=Depends(require_teacher),
+):
+    topic = _assert_teacher_owns_topic(db, class_id, topic_id, user.id)
+
+    updated_at = None
+    if getattr(topic, "updated_at", None):
+        try:
+            updated_at = topic.updated_at.isoformat()
+        except Exception:
+            updated_at = str(topic.updated_at)
+
+    return FinalNotesOut(
+        teacher_notes_md=(topic.teacher_notes_md or "").strip(),
+        student_notes_md=(topic.student_notes_md or "").strip(),
+        updated_at=updated_at,
+    )
+
+
 @router.patch("/classes/{class_id}/topics/{topic_id}/final-notes")
 def patch_final_notes(
     class_id: int,
@@ -40,7 +63,6 @@ def patch_final_notes(
 
     updated = {"teacher": False, "student": False}
 
-    # ✅ update jen když je pole poslané (není None)
     if payload.teacher_notes_md is not None:
         md = payload.teacher_notes_md.strip()
         if not md:

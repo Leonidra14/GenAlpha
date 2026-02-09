@@ -7,7 +7,7 @@ from app.deps.auth import require_teacher
 
 from models.classes import Class
 from models.topics import Topic
-from app.schemas.topics import TopicOut, TopicCreate, TopicUpdate
+from app.schemas.topics import TopicOut, TopicCreate, TopicUpdate, TopicImport
 
 router = APIRouter(tags=["topics"])
 
@@ -17,6 +17,18 @@ def ensure_teacher_owns_class(db: Session, class_id: int, teacher_id: int) -> Cl
     if not cl:
         raise HTTPException(status_code=404, detail="Class not found")
     return cl
+
+def ensure_teacher_owns_topic(db: Session, topic_id: int, teacher_id: int) -> Topic:
+    topic = (
+        db.query(Topic)
+        .join(Class, Topic.class_id == Class.id)
+        .filter(Topic.id == topic_id, Class.teacher_id == teacher_id)
+        .first()
+    )
+    if not topic:
+        raise HTTPException(status_code=404, detail="Source topic not found")
+    return topic
+
 
 
 @router.get("/classes/{class_id}/topics", response_model=List[TopicOut])
@@ -83,3 +95,25 @@ def delete_topic(class_id: int, topic_id: int, user=Depends(require_teacher), db
     db.delete(topic)
     db.commit()
     return {"ok": True}
+
+@router.post("/classes/{class_id}/topics/import", response_model=TopicOut)
+def import_topic(
+    class_id: int,
+    payload: TopicImport,
+    user=Depends(require_teacher),
+    db: Session = Depends(get_db),
+):
+    ensure_teacher_owns_class(db, class_id, user.id)
+
+    source = ensure_teacher_owns_topic(db, payload.source_topic_id, user.id)
+
+    copied = Topic(
+        class_id=class_id,
+        title=source.title,
+        active=source.active,
+    )
+
+    db.add(copied)
+    db.commit()
+    db.refresh(copied)
+    return copied

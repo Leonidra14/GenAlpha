@@ -202,3 +202,9 @@ __marimo__/
 
 backend/uploads/
 
+# Node
+**/node_modules/
+**/.npm/
+**/*.log
+**/dist/
+**/build/
