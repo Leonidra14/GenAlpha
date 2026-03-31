@@ -9,6 +9,11 @@ import {
   getFinalNotes,
   getClassDetail,
   getClassTopics,
+
+  // ✅ QUIZ
+  generateQuiz,
+  getFinalQuiz,
+  saveFinalQuiz,
 } from "../api/api";
 
 // ✅ markdown render
@@ -59,6 +64,13 @@ function normalizeMd(md) {
   return stripOuterCodeFence(md ?? "").trim();
 }
 
+function safeJsonStringify(obj) {
+  return JSON.stringify(obj, null, 2);
+}
+function safeParseJson(text) {
+  return JSON.parse((text || "").trim());
+}
+
 export default function TeacherTopicDetail() {
   const { classId, topicId } = useParams();
   const navigate = useNavigate();
@@ -80,28 +92,28 @@ export default function TeacherTopicDetail() {
   //header info
   const [classTitle, setClassTitle] = useState("");
   const [topicTitle, setTopicTitle] = useState("");
+  const [classDetail, setClassDetail] = useState(null);
 
-
-  // historie verzí (lokálně)
+  // historie verzí (lokálně) pro NOTES
   const [history, setHistory] = useState([]);
 
-  // aktivní verze
+  // aktivní verze NOTES
   const [activeTeacherVersionId, setActiveTeacherVersionId] = useState(null);
   const [activeStudentVersionId, setActiveStudentVersionId] = useState(null);
 
-  // která verze je uložená v DB
+  // která verze NOTES je uložená v DB
   const [dbTeacherVersionId, setDbTeacherVersionId] = useState(null);
   const [dbStudentVersionId, setDbStudentVersionId] = useState(null);
 
-  // regen
+  // regen NOTES
   const [regenTarget, setRegenTarget] = useState("teacher"); // teacher|student|both
   const [userNote, setUserNote] = useState("");
   const [regenLoading, setRegenLoading] = useState(false);
 
-  // save loading
+  // save NOTES loading
   const [saveFinalLoading, setSaveFinalLoading] = useState(false);
 
-  // edit mode
+  // edit mode NOTES
   const [isEditingTeacher, setIsEditingTeacher] = useState(false);
   const [isEditingStudent, setIsEditingStudent] = useState(false);
   const [teacherDraft, setTeacherDraft] = useState("");
@@ -113,6 +125,23 @@ export default function TeacherTopicDetail() {
   // counters
   const versionCounterRef = useRef(0);
   const autoSavedRef = useRef(false);
+
+  // --- QUIZ STATE ---
+  const [quizHistory, setQuizHistory] = useState([]);
+  const [activeQuizVersionId, setActiveQuizVersionId] = useState(null);
+  const [dbQuizVersionId, setDbQuizVersionId] = useState(null);
+
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [quizSaveLoading, setQuizSaveLoading] = useState(false);
+
+  const [quizMcq, setQuizMcq] = useState(8);
+  const [quizYesNo, setQuizYesNo] = useState(4);
+  const [quizFinalOpen, setQuizFinalOpen] = useState(1);
+
+  const [quizDraftJson, setQuizDraftJson] = useState("");
+  const [isEditingQuiz, setIsEditingQuiz] = useState(false);
+
+  const quizVersionCounterRef = useRef(0);
 
   const allowed = useMemo(
     () =>
@@ -192,7 +221,7 @@ export default function TeacherTopicDetail() {
     }
   }
 
-  // --- VERSIONING ---
+  // --- VERSIONING (NOTES) ---
   function _insertHistorySnapshot({ snapshot, label, createdAt, forceId }) {
     const id = forceId || `${Date.now()}_${Math.random().toString(16).slice(2)}`;
     const item = {
@@ -237,6 +266,33 @@ export default function TeacherTopicDetail() {
     return history.length - idx; // nejnovější má nejvyšší číslo
   }
 
+  // --- VERSIONING (QUIZ) ---
+  function _snapshotQuiz(quizObj, label) {
+    quizVersionCounterRef.current += 1;
+    const id = `${Date.now()}_quiz_${quizVersionCounterRef.current}`;
+
+    const item = {
+      id,
+      createdAt: new Date().toISOString(),
+      label,
+      quizSnapshot: JSON.parse(JSON.stringify(quizObj)),
+    };
+
+    setQuizHistory((prev) => [item, ...prev]);
+    return id;
+  }
+
+  function getQuizById(id) {
+    return quizHistory.find((h) => h.id === id) || null;
+  }
+
+  function getQuizVersionNumber(id) {
+    if (!id) return null;
+    const idx = quizHistory.findIndex((h) => h.id === id);
+    if (idx === -1) return null;
+    return quizHistory.length - idx;
+  }
+
   const teacherView = useMemo(() => {
     const item = getById(activeTeacherVersionId);
     return item?.resultSnapshot?.teacher_notes_md || "";
@@ -253,42 +309,47 @@ export default function TeacherTopicDetail() {
     return item?.resultSnapshot?.extracted || null;
   }, [result, history, activeTeacherVersionId]);
 
+  // HEADER LOAD
   useEffect(() => {
-  let cancelled = false;
+    let cancelled = false;
 
-  async function loadHeader() {
-    try {
-      const [cls, topics] = await Promise.all([
-        getClassDetail(classId),
-        getClassTopics(classId),
-      ]);
-      if (cancelled) return;
+    async function loadHeader() {
+      try {
+        const [cls, topics] = await Promise.all([
+          getClassDetail(classId),
+          getClassTopics(classId),
+        ]);
+        if (cancelled) return;
 
-      const clsLabel =
-        (cls?.custom_name || "").trim() ||
-        (cls?.grade != null && cls?.subject ? `${cls.grade}. třída – ${cls.subject}` : "") ||
-        cls?.subject ||
-        `Třída ${classId}`;
+        setClassDetail(cls || null);
 
-      const t = (topics || []).find((x) => String(x.id) === String(topicId));
-      const topicLabel = (t?.title || "").trim() || `Kapitola ${topicId}`;
+        const clsLabel =
+          (cls?.custom_name || "").trim() ||
+          (cls?.grade != null && cls?.subject
+            ? `${cls.grade}. třída – ${cls.subject}`
+            : "") ||
+          cls?.subject ||
+          `Třída ${classId}`;
 
-      setClassTitle(clsLabel);
-      setTopicTitle(topicLabel);
-    } catch {
-      setClassTitle(`Třída ${classId}`);
-      setTopicTitle(`Kapitola ${topicId}`);
+        const t = (topics || []).find((x) => String(x.id) === String(topicId));
+        const topicLabel = (t?.title || "").trim() || `Kapitola ${topicId}`;
+
+        setClassTitle(clsLabel);
+        setTopicTitle(topicLabel);
+      } catch {
+        setClassTitle(`Třída ${classId}`);
+        setTopicTitle(`Kapitola ${topicId}`);
+        setClassDetail(null);
+      }
     }
-  }
 
-  loadHeader();
-  return () => {
-    cancelled = true;
-  };
-}, [classId, topicId]);
+    loadHeader();
+    return () => {
+      cancelled = true;
+    };
+  }, [classId, topicId]);
 
-
-  // ✅ načti DB verzi po otevření stránky
+  // ✅ načti DB NOTES verzi po otevření stránky
   useEffect(() => {
     let cancelled = false;
 
@@ -326,8 +387,8 @@ export default function TeacherTopicDetail() {
           setStudentDraft(normalizeMd(db.student_notes_md || ""));
           setDbStudentVersionId(id);
         }
-      } catch (e) {
-        // necháme potichu (endpoint už máš)
+      } catch {
+        // potichu
       }
     }
 
@@ -337,7 +398,37 @@ export default function TeacherTopicDetail() {
     };
   }, [classId, topicId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // keep drafts synced when switching version/tab
+  // ✅ načti DB QUIZ po otevření stránky
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQuizDb() {
+      try {
+        const q = await getFinalQuiz(topicId);
+        if (cancelled) return;
+
+        const raw = (q?.basic_quiz || "").trim();
+        if (!raw) return;
+
+        const parsed = JSON.parse(raw);
+        const id = _snapshotQuiz(parsed, "Z DB (finální)");
+
+        setActiveQuizVersionId((prev) => prev || id);
+        setDbQuizVersionId(id);
+        setQuizDraftJson(safeJsonStringify(parsed));
+        setIsEditingQuiz(false);
+      } catch {
+        // quiz ještě nemusí existovat
+      }
+    }
+
+    loadQuizDb();
+    return () => {
+      cancelled = true;
+    };
+  }, [topicId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // keep drafts synced when switching version/tab (NOTES)
   useEffect(() => {
     if (tab === "teacher") {
       setTeacherDraft(normalizeMd(teacherView || ""));
@@ -364,7 +455,6 @@ export default function TeacherTopicDetail() {
         saveFinalStudentNotes(classId, topicId, data?.student_notes_md || ""),
       ]);
 
-      // DB teď ukazuje na verzi, kterou jsme právě vytvořili
       setDbTeacherVersionId(createdVersionId);
       setDbStudentVersionId(createdVersionId);
     } catch (e) {
@@ -390,7 +480,6 @@ export default function TeacherTopicDetail() {
         files,
       });
 
-      // normalize výstupy
       const normalized = {
         ...data,
         teacher_notes_md: normalizeMd(data?.teacher_notes_md || ""),
@@ -459,7 +548,6 @@ export default function TeacherTopicDetail() {
       if (normalized && !normalized.rejected) {
         const id = _snapshotResult(normalized, `Regenerace: ${regenTarget}`);
 
-        // po regeneraci chceme vždy přepnout na novou verzi
         if (regenTarget === "teacher") {
           setActiveTeacherVersionId(id);
           setTeacherDraft(normalized.teacher_notes_md || "");
@@ -521,7 +609,9 @@ export default function TeacherTopicDetail() {
         else await saveFinalStudentNotes(classId, topicId, draft || "");
         setError("✅ Změny uložené (lokálně + do DB).");
       } else {
-        setError("✅ Změny uložené (lokálně). Pro DB použij „Uložit jako finální“.");
+        setError(
+          "✅ Změny uložené (lokálně). Pro DB použij „Uložit jako finální“."
+        );
       }
     } catch (e) {
       setError(e?.message || "Nepodařilo se uložit změny do DB.");
@@ -554,6 +644,70 @@ export default function TeacherTopicDetail() {
       setError(e?.message || "Nepodařilo se uložit finální verzi.");
     } finally {
       setSaveFinalLoading(false);
+    }
+  }
+
+  // --- QUIZ actions ---
+  async function onGenerateQuiz() {
+    setError("");
+
+    // ✅ požadavek: jako plain_text použij aktuálně uložené Teacher Notes v DB
+    // -> frontend jen spustí generování; backend si vytáhne DB teacher_notes_md + class metadata
+    // -> tady posíláme jen počty otázek (a vůbec se nehrabeme v teacherDraft)
+    if (!classDetail?.grade || !classDetail?.subject) {
+      setError("Chybí informace o třídě/předmětu (zkus reload).");
+      return;
+    }
+
+    setQuizLoading(true);
+    try {
+      // ✅ SPRÁVNÉ volání (už žádné destructuring z undefined):
+      // generateQuiz(classId, topicId, { mcq, yesno, final_open })
+      const quizObj = await generateQuiz(classId, topicId, {
+        mcq: Number(quizMcq),
+        yesno: Number(quizYesNo),
+        final_open: Number(quizFinalOpen),
+      });
+
+      const id = _snapshotQuiz(quizObj, "Vygenerováno");
+      setActiveQuizVersionId(id);
+      setQuizDraftJson(safeJsonStringify(quizObj));
+      setIsEditingQuiz(true);
+    } catch (e) {
+      setError(e?.message || "Nepodařilo se vygenerovat kvíz.");
+    } finally {
+      setQuizLoading(false);
+    }
+  }
+
+  async function onSaveFinalQuiz() {
+    setError("");
+    if (!activeQuizVersionId) {
+      setError("Vyber verzi kvízu.");
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = safeParseJson(quizDraftJson);
+    } catch {
+      setError("Neplatný JSON v editoru kvízu.");
+      return;
+    }
+
+    setQuizSaveLoading(true);
+    try {
+      // uložíme jako TEXT JSON string
+      const normalized = JSON.stringify(parsed);
+      await saveFinalQuiz(topicId, normalized);
+
+      setDbQuizVersionId(activeQuizVersionId);
+      setError("✅ Quiz finální uložen do DB.");
+      setIsEditingQuiz(false);
+    } catch (e) {
+      setError(e?.message || "Nepodařilo se uložit finální kvíz.");
+    } finally {
+      setQuizSaveLoading(false);
     }
   }
 
@@ -660,7 +814,7 @@ export default function TeacherTopicDetail() {
     padding: 14,
     color: "#1f2330",
     lineHeight: 1.6,
-    overflowX: "auto", // ✅ aby se nerozbíjela stránka při dlouhých řádcích/kódu
+    overflowX: "auto",
   };
 
   const codeTextareaStyle = {
@@ -724,9 +878,10 @@ export default function TeacherTopicDetail() {
         {/* HEADER */}
         <div className="tcdHeader">
           <div className="tcdHeaderLeft">
-<h1 className="tcdTitle">
-  {classTitle || `Třída ${classId}`} – {topicTitle || `Kapitola ${topicId}`}
-</h1>
+            <h1 className="tcdTitle">
+              {classTitle || `Třída ${classId}`} –{" "}
+              {topicTitle || `Kapitola ${topicId}`}
+            </h1>
 
             <div style={tabsRow}>
               <div style={tabLeft}>
@@ -780,8 +935,6 @@ export default function TeacherTopicDetail() {
                 ← Zpět
               </button>
             </div>
-
-            
           </div>
         </div>
 
@@ -1134,9 +1287,191 @@ export default function TeacherTopicDetail() {
             {/* QUIZ */}
             {tab === "quiz" && (
               <div className="tcdCard">
-                <div className="tcdCardTitle">Quiz</div>
-                <div className="tcdSubtitle">
-                  Sem napojíš generování / zobrazení kvízu.
+                <div className="tcdCardHeader" style={{ alignItems: "baseline" }}>
+                  <div className="tcdCardTitle">Quiz</div>
+
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    {!isEditingQuiz ? (
+                      <button
+                        className="tcdBtn ghost"
+                        type="button"
+                        onClick={() => setIsEditingQuiz(true)}
+                        disabled={!activeQuizVersionId}
+                      >
+                        ✏️ Upravit JSON
+                      </button>
+                    ) : (
+                      <button
+                        className="tcdBtn ghost"
+                        type="button"
+                        onClick={() => setIsEditingQuiz(false)}
+                      >
+                        👁️ Náhled
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                    <div className="tcdField" style={{ maxWidth: 120 }}>
+                      <div style={{ fontWeight: 800, marginBottom: 6, color: "#333" }}>MCQ</div>
+                      <input
+                        className="tcdInput"
+                        type="number"
+                        min={0}
+                        max={50}
+                        value={quizMcq}
+                        onChange={(e) => setQuizMcq(Number(e.target.value || 0))}
+                      />
+                    </div>
+
+                    <div className="tcdField" style={{ maxWidth: 120 }}>
+                      <div style={{ fontWeight: 800, marginBottom: 6, color: "#333" }}>ANO/NE</div>
+                      <input
+                        className="tcdInput"
+                        type="number"
+                        min={0}
+                        max={50}
+                        value={quizYesNo}
+                        onChange={(e) => setQuizYesNo(Number(e.target.value || 0))}
+                      />
+                    </div>
+
+                    <div className="tcdField" style={{ maxWidth: 160 }}>
+                      <div style={{ fontWeight: 800, marginBottom: 6, color: "#333" }}>FINAL_OPEN</div>
+                      <select
+                        className="tcdInput"
+                        value={quizFinalOpen}
+                        onChange={(e) => setQuizFinalOpen(Number(e.target.value))}
+                      >
+                        <option value={1}>1 (doporučeno)</option>
+                        <option value={0}>0</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <button
+                    className="tcdBtn primary"
+                    type="button"
+                    onClick={onGenerateQuiz}
+                    disabled={quizLoading}
+                  >
+                    {quizLoading ? "Generuji kvíz…" : "✨ Vygenerovat kvíz z poznámek"}
+                  </button>
+                </div>
+
+                <select
+                  className="tcdInput"
+                  value={activeQuizVersionId || ""}
+                  onChange={(e) => {
+                    const id = e.target.value || null;
+                    setActiveQuizVersionId(id);
+                    const it = getQuizById(id);
+                    if (it?.quizSnapshot) setQuizDraftJson(safeJsonStringify(it.quizSnapshot));
+                    setIsEditingQuiz(false);
+                  }}
+                  disabled={quizHistory.length === 0}
+                  style={{ marginBottom: 12 }}
+                >
+                  <option value="">
+                    {quizHistory.length === 0 ? "— žádné verze kvízu —" : "Vyber verzi kvízu"}
+                  </option>
+                  {quizHistory.map((h, idx) => (
+                    <option key={h.id} value={h.id}>
+                      {`Verze ${quizHistory.length - idx} — ${h.label} — ${formatTime(
+                        h.createdAt
+                      )}${dbQuizVersionId === h.id ? " ✅(DB)" : ""}`}
+                    </option>
+                  ))}
+                </select>
+
+                {activeQuizVersionId ? (
+                  !isEditingQuiz ? (
+                    <div style={paperBox}>
+                      {(() => {
+                        let parsed = null;
+                        try {
+                          parsed = safeParseJson(quizDraftJson);
+                        } catch {
+                          return <div style={{ opacity: 0.75 }}>Neplatný JSON.</div>;
+                        }
+                        const qs = parsed?.questions || [];
+                        if (!qs.length) return <div style={{ opacity: 0.75 }}>— žádné otázky —</div>;
+
+                        return (
+                          <div style={{ display: "grid", gap: 10 }}>
+                            {qs.map((q, i) => (
+                              <div
+                                key={q.id || i}
+                                style={{
+                                  background: "rgba(255,255,255,0.7)",
+                                  border: "1px solid rgba(0,0,0,0.08)",
+                                  borderRadius: 14,
+                                  padding: 12,
+                                }}
+                              >
+                                <div style={{ fontWeight: 900, marginBottom: 6 }}>
+                                  {i + 1}. ({q.type}, diff {q.difficulty}) {q.prompt}
+                                </div>
+
+                                {q.type === "mcq" && q.options && (
+                                  <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
+                                    {["A", "B", "C", "D"].map((k) => (
+                                      <div key={k} style={{ opacity: q.correct_answer === k ? 1 : 0.85 }}>
+                                        <b>{k}:</b> {q.options?.[k]}
+                                        {q.correct_answer === k ? " ✅" : ""}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {q.type === "yesno" && (
+                                  <div style={{ marginTop: 6, opacity: 0.9 }}>
+                                    Správně: <b>{q.correct_answer === "A" ? "ANO" : "NE"}</b>
+                                  </div>
+                                )}
+
+                                {q.explanation && (
+                                  <div style={{ marginTop: 8, fontStyle: "italic", opacity: 0.9 }}>
+                                    {q.explanation}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <textarea
+                      className="tcdInput"
+                      value={quizDraftJson}
+                      onChange={(e) => setQuizDraftJson(e.target.value)}
+                      style={codeTextareaStyle}
+                    />
+                  )
+                ) : (
+                  <div style={{ ...paperBox, opacity: 0.9 }}>
+                    Zatím nemáš žádný kvíz. Klikni na <b>Vygenerovat kvíz</b>.
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
+                  <button
+                    className="tcdBtn primary"
+                    type="button"
+                    onClick={onSaveFinalQuiz}
+                    disabled={quizSaveLoading || !activeQuizVersionId}
+                  >
+                    {quizSaveLoading ? "Ukládám…" : "⭐ Uložit kvíz jako finální do DB"}
+                  </button>
+
+                  {dbQuizVersionId && (
+                    <div style={{ opacity: 0.75, fontSize: 13, alignSelf: "center" }}>
+                      V DB je uložená verze: <b>{getQuizVersionNumber(dbQuizVersionId) ?? "—"}</b>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1210,10 +1545,7 @@ export default function TeacherTopicDetail() {
                 </div>
 
                 <div className="tcdCard">
-                  <div
-                    className="tcdCardTitle"
-                    style={{ fontSize: 16, marginBottom: 10 }}
-                  >
+                  <div className="tcdCardTitle" style={{ fontSize: 16, marginBottom: 10 }}>
                     Přílohy (max 3) — PDF / obrázky
                   </div>
 
@@ -1258,14 +1590,7 @@ export default function TeacherTopicDetail() {
                       style={{ display: "none" }}
                     />
 
-                    <div
-                      style={{
-                        opacity: 0.7,
-                        fontSize: 13,
-                        marginTop: 8,
-                        color: "#1f2330",
-                      }}
-                    >
+                    <div style={{ opacity: 0.7, fontSize: 13, marginTop: 8, color: "#1f2330" }}>
                       Podporované: PDF, PNG/JPG/WEBP.
                     </div>
 
@@ -1319,11 +1644,7 @@ export default function TeacherTopicDetail() {
                           );
                         })}
 
-                        <button
-                          type="button"
-                          className="tcdBtn ghost"
-                          onClick={clearFiles}
-                        >
+                        <button type="button" className="tcdBtn ghost" onClick={clearFiles}>
                           Odebrat všechny soubory
                         </button>
                       </div>
@@ -1337,21 +1658,11 @@ export default function TeacherTopicDetail() {
             {(tab === "teacher" || tab === "student") && (
               <>
                 <div className="tcdCard">
-                  <div
-                    className="tcdCardTitle"
-                    style={{ fontSize: 16, marginBottom: 10 }}
-                  >
+                  <div className="tcdCardTitle" style={{ fontSize: 16, marginBottom: 10 }}>
                     Aktuálně uložené v DB
                   </div>
 
-                  <div
-                    style={{
-                      fontSize: 13,
-                      opacity: 0.85,
-                      color: "#1f2330",
-                      lineHeight: 1.35,
-                    }}
-                  >
+                  <div style={{ fontSize: 13, opacity: 0.85, color: "#1f2330", lineHeight: 1.35 }}>
                     <div>
                       <b>Teacher:</b> {dbTeacherLabel}
                     </div>
@@ -1362,30 +1673,18 @@ export default function TeacherTopicDetail() {
                 </div>
 
                 <div className="tcdCard">
-                  <div
-                    className="tcdCardTitle"
-                    style={{ fontSize: 16, marginBottom: 10 }}
-                  >
+                  <div className="tcdCardTitle" style={{ fontSize: 16, marginBottom: 10 }}>
                     Finální verze
                   </div>
 
-                  <div
-                    style={{
-                      opacity: 0.75,
-                      fontSize: 13,
-                      marginBottom: 10,
-                      color: "#1f2330",
-                    }}
-                  >
+                  <div style={{ opacity: 0.75, fontSize: 13, marginBottom: 10, color: "#1f2330" }}>
                     Uloží aktuálně vybranou verzi (a její úpravy) do DB jako finální.
                   </div>
 
                   <button
                     className="tcdBtn primary"
                     style={{ width: "100%" }}
-                    onClick={() =>
-                      saveFinalFromActive(tab === "teacher" ? "teacher" : "student")
-                    }
+                    onClick={() => saveFinalFromActive(tab === "teacher" ? "teacher" : "student")}
                     disabled={saveFinalLoading || noNotesYet}
                     title={noNotesYet ? "Nejdřív vygeneruj výstup v Tvorbě." : ""}
                   >
@@ -1394,10 +1693,7 @@ export default function TeacherTopicDetail() {
                 </div>
 
                 <div className="tcdCard">
-                  <div
-                    className="tcdCardTitle"
-                    style={{ fontSize: 16, marginBottom: 10 }}
-                  >
+                  <div className="tcdCardTitle" style={{ fontSize: 16, marginBottom: 10 }}>
                     Upravit výstup poznámkou
                   </div>
 
@@ -1424,6 +1720,7 @@ export default function TeacherTopicDetail() {
                       marginTop: 10,
                       color: "#1f2330",
                     }}
+                    maxLength={2000}
                   />
 
                   <button

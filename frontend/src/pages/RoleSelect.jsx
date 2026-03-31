@@ -102,7 +102,7 @@ export default function RoleSelect() {
             </div>
           </div>
 
-          <div className="roleCard roleCardDisabled" aria-disabled="true">
+          <div className="roleCard roleCard">
             <div className="roleCardTop">
               <img className="roleCardImg" src={studentImg} alt="" aria-hidden="true" />
             </div>

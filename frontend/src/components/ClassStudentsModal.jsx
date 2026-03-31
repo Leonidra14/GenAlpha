@@ -317,6 +317,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                           value={newPw}
                           onChange={(e) => setNewPw(e.target.value)}
                           placeholder="Zadej nové heslo"
+                          maxLength={72}
                         />
                         <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
                           <button
@@ -363,6 +364,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="např. Novák, student@email.cz nebo 14"
+            maxLength={100}
           />
           <button style={styles.btn} type="button" disabled={loading} onClick={() => loadAvailable(search)}>
             🔎 Hledat
@@ -423,6 +425,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Např. Jan"
+                maxLength={100}
               />
             </div>
             <div>
@@ -432,6 +435,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Např. Novák"
+                maxLength={100}
               />
             </div>
           </div>
@@ -443,6 +447,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="student@email.cz"
+              maxLength={255}
             />
           </div>
 
@@ -454,6 +459,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="8–72 znaků"
+              maxLength={72}
             />
           </div>
 

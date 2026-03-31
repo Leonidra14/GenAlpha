@@ -10,7 +10,6 @@ import labs from "../assets/lab_books.png";
 import star from "../assets/star.png";
 import flight from "../assets/flight.png";
 
-// deterministic random (stejné jako u loginu)
 function mulberry32(seed) {
   return function () {
     let t = (seed += 0x6d2b79f5);
@@ -129,6 +128,7 @@ export default function TeacherRegister() {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 disabled={loading}
+                maxLength={80}
               />
             </label>
 
@@ -140,6 +140,7 @@ export default function TeacherRegister() {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 disabled={loading}
+                maxLength={80}
               />
             </label>
 
@@ -152,6 +153,8 @@ export default function TeacherRegister() {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
                 autoComplete="email"
+                maxLength={255}
+                type="email"
               />
             </label>
 
@@ -165,6 +168,7 @@ export default function TeacherRegister() {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
                 autoComplete="new-password"
+                maxLength={72}
               />
             </label>
 

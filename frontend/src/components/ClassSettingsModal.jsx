@@ -162,6 +162,9 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
                 inputMode="numeric"
                 placeholder="Např. 5"
                 disabled={loading}
+                type="number"
+                min={1}
+                max={20}
               />
             </div>
 
@@ -173,6 +176,7 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="Např. Informatika"
                 disabled={loading}
+                maxLength={100}
               />
             </div>
           </div>
@@ -185,6 +189,7 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
               onChange={(e) => setCustomName(e.target.value)}
               placeholder="Např. Bibecci"
               disabled={loading}
+              maxLength={100}
             />
           </div>
 
@@ -196,6 +201,7 @@ export default function ClassSettingsModal({ open, onClose, classId, onSaved }) 
               onChange={(e) => setNote(e.target.value)}
               placeholder="Např. domácí úkoly…"
               disabled={loading}
+              maxLength={255}
             />
           </div>
 

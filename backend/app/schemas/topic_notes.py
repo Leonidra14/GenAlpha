@@ -1,9 +1,9 @@
 from typing import Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class FinalNotesPatchIn(BaseModel):
-    teacher_notes_md: Optional[str] = None
-    student_notes_md: Optional[str] = None
+    teacher_notes_md: Optional[str] = Field(default=None, max_length=50000)
+    student_notes_md: Optional[str] = Field(default=None, max_length=50000)
 
 class FinalNotesOut(BaseModel):
     teacher_notes_md: str = ""

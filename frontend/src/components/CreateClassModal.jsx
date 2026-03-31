@@ -74,6 +74,9 @@ export default function CreateClassModal({ open, onClose, onCreated }) {
                 placeholder="např. 5"
                 inputMode="numeric"
                 disabled={loading}
+                type="number"
+                min={1}
+                max={20}
               />
             </div>
           </div>
@@ -83,6 +86,7 @@ export default function CreateClassModal({ open, onClose, onCreated }) {
             <div className="ccmField">
               <span className="ccmIcon" aria-hidden="true">📘</span>
               <input
+                maxLength={100}
                 className="ccmInput"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
@@ -103,6 +107,7 @@ export default function CreateClassModal({ open, onClose, onCreated }) {
               onChange={(e) => setCustomName(e.target.value)}
               placeholder="např. Dívky z 5.B"
               disabled={loading}
+              maxLength={100}
             />
           </div>
         </div>
@@ -117,6 +122,7 @@ export default function CreateClassModal({ open, onClose, onCreated }) {
               onChange={(e) => setNote(e.target.value)}
               placeholder="např. číslo učebny…"
               disabled={loading}
+              maxLength={100}
             />
           </div>
         </div>

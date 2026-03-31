@@ -203,3 +203,4 @@ def student_regen_user(*, current_md: str, user_note: str) -> str:
     - Zachovej markdown strukturu z CURRENT_MD (nadpisy/sekce).
     - Když je v CURRENT_MD část pro učitele (metodika/poznámky pro učitele), zjednoduš ji pro žáka nebo ji vynech.
     """.strip()
+

@@ -154,4 +154,40 @@ export function setStudentTopicDone(topicId, done) {
   });
 }
 
+// --- QUIZ API ---
+export async function generateQuiz(classId, topicId, { mcq, yesno, final_open }) {
+  return apiFetch(`/quiz/generate/${classId}/${topicId}`, {
+    method: "POST",
+    body: JSON.stringify({ mcq, yesno, final_open }),
+  });
+}
+
+export async function getFinalQuiz(topicId) {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/quiz/${topicId}`, {
+    headers: {
+      Authorization: `Bearer ${localStorage.getItem("access_token") || ""}`,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || "Quiz load failed");
+  }
+  return await res.json(); // { topic_id, basic_quiz }
+}
+
+export async function saveFinalQuiz(topicId, quizJsonString) {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/quiz/${topicId}/final`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("access_token") || ""}`,
+    },
+    body: JSON.stringify({ quiz_json: quizJsonString }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || "Quiz save failed");
+  }
+  return await res.json(); 
+}
 

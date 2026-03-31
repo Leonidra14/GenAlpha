@@ -1,16 +1,22 @@
-from pydantic import BaseModel, Field
+import re
+
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Literal
+
+from app.core.utils import sanitize_text    
 
 class GenerateNotesIn(BaseModel):
     duration_minutes: int = Field(default=45, ge=5, le=240)
-    raw_text: str = Field(..., min_length=1)
+    raw_text: str = Field(..., min_length=1, max_length=50000)
+    @field_validator("raw_text")
+    @classmethod
+    def sanitize_text(cls, v: str) -> str:
+        return sanitize_text(v)
 
-# 1) Kontrola kontextu
 class ContextCheckOut(BaseModel):
     rejected: bool
     reject_reason: str = ""
 
-# 2) AutoTag / Metadata
 class ExtractedDate(BaseModel):
     value: str = Field(..., description="Rok nebo interval přesně jak je v textu, např. '1740–1780' nebo '1620'")
     context: Optional[str] = Field(default=None, description="K čemu se to vztahuje, jen pokud je to v textu")
@@ -33,7 +39,6 @@ class AutoTagOut(BaseModel):
 
     missing: List[str] = Field(default_factory=list, description="Co v textu chybí / nejasnosti")
 
-# Finální response
 class GenerateNotesOut(BaseModel):
     meta: dict
     rejected: bool
