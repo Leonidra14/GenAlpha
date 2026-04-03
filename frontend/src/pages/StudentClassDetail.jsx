@@ -34,9 +34,16 @@ export default function StudentClassDetail() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const logout = () => {
-    localStorage.removeItem("access_token");
-    window.location.href = "/";
+
+  const logout = async () => {
+    try {
+      await apiFetch("/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.warn("Chyba při odhlášení studenta:", err);
+    } finally {
+      localStorage.removeItem("access_token");
+      window.location.href = "/";
+    }
   };
 
   async function load() {
@@ -56,11 +63,9 @@ export default function StudentClassDetail() {
 
   useEffect(() => {
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classId]);
 
   async function markDone(topic, doneValue) {
-    // optimistický update v UI
     setTopics((prev) =>
       prev.map((x) => (x.id === topic.id ? { ...x, done: doneValue } : x))
     );
@@ -76,7 +81,6 @@ export default function StudentClassDetail() {
     }
   }
 
-  /* ⭐✈️ random dekorace */
   const randomDecos = useMemo(() => {
     const rand = mulberry32(123);
 

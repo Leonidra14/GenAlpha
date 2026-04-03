@@ -21,7 +21,6 @@ from app.schemas.note_regeneration import RegenerateNotesIn
 
 router = APIRouter()
 
-# ====== CONFIG ======
 MAX_FILES = 3
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -87,9 +86,7 @@ def _extract_text_from_pdf(data: bytes) -> str:
         return ""
 
 
-# =====================================================================
 # GENERATE NOTES
-# =====================================================================
 @router.post(
     "/classes/{class_id}/topics/{topic_id}/generate-notes",
     response_model=GenerateNotesOut,
@@ -169,7 +166,7 @@ async def generate_notes(
             raw_text = (raw_text or "").strip()
             raw_text = (raw_text + "\n\n" + "\n".join(combined_texts)).strip()
 
-        # ---------- AI WORKFLOW ----------
+        # AI WORKFLOW
         rejected, reason, extracted, warnings, teacher_md, student_md = run_notes_workflow(
             client,
             subject=cls.subject,
@@ -182,7 +179,6 @@ async def generate_notes(
         )
 
     finally:
-        # 🧹 CLEANUP – SMAŽ UPLOADY
         for f in saved_files_meta:
             try:
                 Path(f["path"]).unlink(missing_ok=True)
@@ -223,9 +219,7 @@ async def generate_notes(
     )
 
 
-# =====================================================================
 # REGENERATE NOTES
-# =====================================================================
 @router.post(
     "/classes/{class_id}/topics/{topic_id}/regenerate-notes",
     response_model=GenerateNotesOut,

@@ -10,6 +10,7 @@ import {
   deleteTopic,
 } from "../api/api";
 
+import { apiFetch } from "../api/client"; // ⭐ PŘIDÁNO: importujeme tvůj bezpečný fetcher
 import ClassSettingsModal from "../components/ClassSettingsModal";
 import ClassStudentsModal from "../components/ClassStudentsModal";
 
@@ -107,9 +108,18 @@ export default function TeacherClassDetail() {
     }
   }
 
-  const logout = () => {
-    localStorage.removeItem("access_token");
-    window.location.href = "/";
+  // ⭐ UPRAVENO: Funkce pro kompletní odhlášení (stejná logika jako na minulé stránce)
+  const logout = async () => {
+    try {
+      // 1. Zneplatníme session v DB a smažeme cookie
+      await apiFetch("/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.warn("Chyba při logoutu na serveru:", err);
+    } finally {
+      // 2. Vždy vyčistíme lokální paměť a pošleme uživatele na začátek
+      localStorage.removeItem("access_token");
+      window.location.href = "/";
+    }
   };
 
   /* ⭐✈️ random dekorace */
@@ -202,10 +212,11 @@ export default function TeacherClassDetail() {
       <img className="tcdDec tcdLabs" src={labs} alt="" aria-hidden="true" />
 
       <div className="tcdWrap">
-        {/* TOPBAR: logo vlevo, logout úplně vpravo */}
+        {/* TOPBAR */}
         <div className="tcdTopbar">
           <img className="tcdLogo" src={logo} alt="GenAlpha" />
           <div className="tcdTopActions">
+            {/* Tlačítko nyní volá naši asynchronní funkci logout */}
             <button className="tcdBtn pillDanger" onClick={logout}>
               ⟶ Odhlásit se
             </button>
@@ -217,7 +228,6 @@ export default function TeacherClassDetail() {
           <div className="tcdHeaderLeft">
             <h1 className="tcdTitle">{title}</h1>
 
-            {/* ✅ stejný řádek: Studenti + Nastavení + Zpět */}
             <div
                 style={{
                   display: "flex",
@@ -228,7 +238,6 @@ export default function TeacherClassDetail() {
                   width: "100%",
                 }}
               >
-                {/* levá skupina */}
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
                   <button className="tcdBtn primarySoft" onClick={() => setStudentsOpen(true)}>
                     👩‍🎓 Studenti ({cls.num_students ?? 0})
@@ -239,7 +248,6 @@ export default function TeacherClassDetail() {
                   </button>
                 </div>
 
-                {/* pravá strana */}
                 <button className="tcdBtn ghost" onClick={() => navigate("/teacher")}>
                   ← Zpět
                 </button>
@@ -284,21 +292,15 @@ export default function TeacherClassDetail() {
             </form>
           </div>
 
-          {/* Aktivní */}
           <div className="tcdSection">
             <div className="tcdSectionTitle">Aktivní</div>
-
             {activeTopics.length === 0 && <div className="tcdEmpty">Žádné aktivní kapitoly</div>}
-
             {activeTopics.map((t) => (
               <div key={t.id} className="tcdTopic" onClick={() => openTopic(t.id)}>
                 <div className="tcdTopicLeft">
-                  <div className="tcdBulb" aria-hidden="true">
-                    💡
-                  </div>
+                  <div className="tcdBulb" aria-hidden="true">💡</div>
                   <div className="tcdTopicTitle">{t.title}</div>
                 </div>
-
                 <div className="tcdTopicActions" onClick={(e) => e.stopPropagation()}>
                   <button className="tcdBtn pill" type="button" onClick={() => onToggleTopic(t)}>
                     Deaktivovat
@@ -315,12 +317,9 @@ export default function TeacherClassDetail() {
             ))}
           </div>
 
-          {/* Neaktivní */}
           <div className="tcdSection">
             <div className="tcdSectionTitle muted">Neaktivní</div>
-
             {inactiveTopics.length === 0 && <div className="tcdEmpty">Žádné neaktivní kapitoly</div>}
-
             {inactiveTopics.map((t) => (
               <div
                 key={t.id}
@@ -328,12 +327,9 @@ export default function TeacherClassDetail() {
                 onClick={() => openTopic(t.id)}
               >
                 <div className="tcdTopicLeft">
-                  <div className="tcdBulb" aria-hidden="true">
-                    💡
-                  </div>
+                  <div className="tcdBulb" aria-hidden="true">💡</div>
                   <div className="tcdTopicTitle">{t.title}</div>
                 </div>
-
                 <div className="tcdTopicActions" onClick={(e) => e.stopPropagation()}>
                   <button className="tcdBtn pill" type="button" onClick={() => onToggleTopic(t)}>
                     Aktivovat
@@ -351,7 +347,6 @@ export default function TeacherClassDetail() {
           </div>
         </div>
 
-        {/* modals */}
         <ClassSettingsModal
           open={settingsOpen}
           onClose={() => setSettingsOpen(false)}

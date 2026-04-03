@@ -1,6 +1,8 @@
 from app.schemas.students import StudentOut
 from pydantic import BaseModel
 from datetime import datetime
+from pydantic import Field
+from pydantic import field_validator
 
 
 class EnrollmentCreate(BaseModel):

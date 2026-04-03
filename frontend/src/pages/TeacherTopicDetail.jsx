@@ -10,11 +10,11 @@ import {
   getClassDetail,
   getClassTopics,
 
-  // ✅ QUIZ
   generateQuiz,
   getFinalQuiz,
   saveFinalQuiz,
 } from "../api/api";
+import { apiFetch } from "../api/client"; 
 
 // ✅ markdown render
 import ReactMarkdown from "react-markdown";
@@ -732,10 +732,16 @@ export default function TeacherTopicDetail() {
   const hasDbTeacher = !!dbTeacherVersionId;
   const hasDbStudent = !!dbStudentVersionId;
 
-  const logout = () => {
+const logout = async () => {
+  try {
+    await apiFetch("/auth/logout", { method: "POST" });
+  } catch (err) {
+    console.warn("Serverové odhlášení selhalo, pokračuji lokálně...", err);
+  } finally {
     localStorage.removeItem("access_token");
     window.location.href = "/";
-  };
+  }
+};
 
   // decorace
   const randomDecos = useMemo(() => {

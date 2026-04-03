@@ -11,6 +11,8 @@ import logo from "../assets/logo.png";
 import star from "../assets/star.png";
 import flight from "../assets/flight.png";
 
+import { apiFetch } from "../api/client";
+
 /* deterministic random */
 function mulberry32(seed) {
   return function () {
@@ -20,6 +22,18 @@ function mulberry32(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
+
+
+const handleLogout = async () => {
+  try {
+    await apiFetch("/auth/logout", { method: "POST" });
+  } catch (err) {
+    console.warn("Chyba při odhlášení studenta:", err);
+  } finally {
+    localStorage.removeItem("access_token");
+    window.location.href = "/";
+  }
+};
 
 const StudentMainPage = () => {
   const [classes, setClasses] = useState([]);
@@ -103,7 +117,7 @@ const StudentMainPage = () => {
         <div className="tmainTopbar">
           <img className="tmainLogo" src={logo} alt="GenAlpha" />
           <h1 className="tmainTitle tmainTitleInline">Tvé třídy</h1>
-          <button className="tmainLogout" onClick={() => nav("/")}>
+          <button className="tmainLogout" onClick={handleLogout}>
             ⟶ Odhlásit se
           </button>
         </div>
