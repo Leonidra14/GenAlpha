@@ -1,29 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   getStudentClassDetail,
   getStudentClassTopics,
   setStudentTopicDone,
 } from "../api/api";
+import AppTopbar from "../components/layout/AppTopbar";
+import AppBackgroundDecor from "../components/layout/AppBackgroundDecor";
+import { useLogout } from "../hooks/useLogout";
 
 import "./TeacherClassDetail.css";
 
 // decor
 import clouds from "../assets/clouds.png";
 import labs from "../assets/lab_books.png";
-import logo from "../assets/logo.png";
 import star from "../assets/star.png";
 import flight from "../assets/flight.png";
-
-/* deterministic random */
-function mulberry32(seed) {
-  return function () {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { useRandomDecorations } from "../hooks/useRandomDecorations";
 
 export default function StudentClassDetail() {
   const { classId } = useParams();
@@ -34,17 +27,7 @@ export default function StudentClassDetail() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
 
-
-  const logout = async () => {
-    try {
-      await apiFetch("/auth/logout", { method: "POST" });
-    } catch (err) {
-      console.warn("Chyba při odhlášení studenta:", err);
-    } finally {
-      localStorage.removeItem("access_token");
-      window.location.href = "/";
-    }
-  };
+  const logout = useLogout();
 
   async function load() {
     setError("");
@@ -81,40 +64,11 @@ export default function StudentClassDetail() {
     }
   }
 
-  const randomDecos = useMemo(() => {
-    const rand = mulberry32(123);
-
-    const starsCount = 18 + Math.floor(rand() * 10);
-    const flightsCount = 6 + Math.floor(rand() * 4);
-
-    const items = [];
-    const add = (count, type) => {
-      for (let i = 0; i < count; i++) {
-        const left = `${Math.round(rand() * 100)}%`;
-        const top = `${Math.round(rand() * 85)}%`;
-
-        const scale = type === "star" ? 0.6 + rand() * 0.9 : 0.75 + rand() * 0.7;
-        const rotate = (rand() * 30 - 15).toFixed(1);
-        const opacity = (0.18 + rand() * 0.32).toFixed(2);
-
-        items.push({
-          id: `${type}-${i}`,
-          type,
-          src: type === "star" ? star : flight,
-          style: {
-            left,
-            top,
-            opacity,
-            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotate}deg)`,
-          },
-        });
-      }
-    };
-
-    add(starsCount, "star");
-    add(flightsCount, "flight");
-    return items;
-  }, []);
+  const randomDecos = useRandomDecorations({
+    seed: 123,
+    starSrc: star,
+    flightSrc: flight,
+  });
 
   if (loading) {
     return (
@@ -159,33 +113,31 @@ export default function StudentClassDetail() {
 
   return (
     <div className="tcdPage">
-      {/* decor */}
-      <img className="tcdDec tcdClouds" src={clouds} alt="" aria-hidden="true" />
-      {randomDecos.map((d) => (
-        <img
-          key={d.id}
-          className={`tcdDec tcdRand ${d.type === "flight" ? "tcdRandFlight" : "tcdRandStar"}`}
-          src={d.src}
-          alt=""
-          aria-hidden="true"
-          style={d.style}
-        />
-      ))}
-      <img className="tcdDec tcdLabs" src={labs} alt="" aria-hidden="true" />
+      <AppBackgroundDecor
+        cloudsSrc={clouds}
+        labsSrc={labs}
+        randomDecos={randomDecos}
+        cloudsClassName="tcdDec tcdClouds"
+        labsClassName="tcdDec tcdLabs"
+        randomBaseClassName="tcdDec tcdRand"
+        randomFlightClassName="tcdRandFlight"
+        randomStarClassName="tcdRandStar"
+      />
 
       <div className="tcdWrap">
         {/* topbar */}
-        <div className="tcdTopbar">
-          <img className="tcdLogo" src={logo} alt="GenAlpha" />
-          <div className="tcdTopActions">
+        <AppTopbar
+          onLogout={logout}
+          topbarClassName="tcdTopbar"
+          logoClassName="tcdLogo"
+          actionsClassName="tcdTopActions"
+          logoutButtonClassName="tcdBtn pillDanger"
+          actions={
             <button className="tcdBtn ghost" onClick={() => nav("/student")}>
               ← Zpět
             </button>
-            <button className="tcdBtn pillDanger" onClick={logout}>
-              ⟶ Odhlásit se
-            </button>
-          </div>
-        </div>
+          }
+        />
 
         {/* header info */}
         <div className="tcdHeader">

@@ -1,0 +1,21 @@
+.ttFullWidth {
+  width: 100%;
+}
+
+.ttRowWrap {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.ttMuted13 {
+  opacity: 0.75;
+  font-size: 13px;
+  color: #1f2330;
+}
+
+.ttCardTitleSmall {
+  font-size: 16px;
+  margin-bottom: 10px;
+}

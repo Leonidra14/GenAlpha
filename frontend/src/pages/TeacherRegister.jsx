@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { apiFetch } from "../api/client";
-import "./TeacherLogin.css";
+import "../components/auth/AuthLoginPage.css";
 
 import logo from "../assets/logo.png";
 import teacherIllustration from "../assets/teacher2.png";

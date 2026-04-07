@@ -26,6 +26,7 @@ if (res.status === 401 && !path.includes("/auth/refresh") && !path.includes("/au
     try {
       const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
         method: "POST",
+        credentials: "include",
       });
 
       if (refreshRes.ok) {

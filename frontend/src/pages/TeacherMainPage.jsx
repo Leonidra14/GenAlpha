@@ -1,27 +1,18 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherClassCard from "../components/TeacherClassCard";
 import CreateClassModal from "../components/CreateClassModal";
+import AppTopbar from "../components/layout/AppTopbar";
+import AppBackgroundDecor from "../components/layout/AppBackgroundDecor";
 import { getTeacherClasses, updateClass } from "../api/api";
-import { apiFetch } from "../api/client"; // ⭐ PŘIDÁNO: importujeme tvůj upravený fetcher
 import "./TeacherMainPage.css";
 
-// dekorace (zůstávají stejné)
 import clouds from "../assets/clouds.png";
 import labs from "../assets/lab_books.png";
-import logo from "../assets/logo.png";
 import star from "../assets/star.png";
 import flight from "../assets/flight.png";
-
-/* deterministic random (zůstává stejné) */
-function mulberry32(seed) {
-  return function () {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+import { useRandomDecorations } from "../hooks/useRandomDecorations";
+import { useLogout } from "../hooks/useLogout";
 
 const TeacherMainPage = () => {
   const [classes, setClasses] = useState([]);
@@ -30,52 +21,17 @@ const TeacherMainPage = () => {
 
   const nav = useNavigate();
 
-  // ⭐ PŘIDÁNO: Funkce pro opravdové odhlášení
-  const handleLogout = async () => {
-    try {
-      // 1. Zavoláme backend, aby smazal Refresh Token z DB a smazal Cookie
-      await apiFetch("/auth/logout", { method: "POST" });
-    } catch (err) {
-      // Pokud server neodpovídá, aspoň zalogujeme chybu, ale uživatele odhlásíme lokálně
-      console.warn("Serverové odhlášení selhalo, pokračuji lokálně.", err);
-    } finally {
-      // 2. V každém případě smažeme Access Token z paměti prohlížeče
-      localStorage.removeItem("access_token");
-      // 3. Pošleme uživatele na úvodní stránku
-      nav("/");
-    }
-  };
+  const handleLogout = useLogout();
 
-  /* ⭐✈️ random dekorace (zůstává stejné) */
-  const randomDecos = useMemo(() => {
-    const rand = mulberry32(99);
-    const starsCount = 50;
-    const flightsCount = 10;
-    const items = [];
-    const add = (count, type) => {
-      for (let i = 0; i < count; i++) {
-        const left = `${Math.round(rand() * 100)}%`;
-        const top = `${Math.round(rand() * 85)}%`;
-        const scale = type === "star" ? 0.6 + rand() * 0.9 : 0.75 + rand() * 0.7;
-        const rotate = (rand() * 30 - 15).toFixed(1);
-        const opacity = (0.18 + rand() * 0.35).toFixed(2);
-        items.push({
-          id: `${type}-${i}`,
-          type,
-          src: type === "star" ? star : flight,
-          style: {
-            left,
-            top,
-            opacity,
-            transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotate}deg)`,
-          },
-        });
-      }
-    };
-    add(starsCount, "star");
-    add(flightsCount, "flight");
-    return items;
-  }, []);
+  const randomDecos = useRandomDecorations({
+    seed: 99,
+    starsMin: 50,
+    starsRange: 1,
+    flightsMin: 10,
+    flightsRange: 1,
+    starSrc: star,
+    flightSrc: flight,
+  });
 
   async function load() {
     setError("");
@@ -111,30 +67,28 @@ const TeacherMainPage = () => {
 
   return (
     <div className="tmainPage">
-      <img className="tmainDec tmainClouds" src={clouds} alt="" aria-hidden="true" />
-
-      {randomDecos.map((d) => (
-        <img
-          key={d.id}
-          className={`tmainDec tmainRand ${d.type === "flight" ? "tmainRandFlight" : "tmainRandStar"}`}
-          src={d.src}
-          alt=""
-          aria-hidden="true"
-          style={d.style}
-        />
-      ))}
-
-      <img className="tmainDec tmainLabs" src={labs} alt="" aria-hidden="true" />
+      <AppBackgroundDecor
+        cloudsSrc={clouds}
+        labsSrc={labs}
+        randomDecos={randomDecos}
+        cloudsClassName="tmainDec tmainClouds"
+        labsClassName="tmainDec tmainLabs"
+        randomBaseClassName="tmainDec tmainRand"
+        randomFlightClassName="tmainRandFlight"
+        randomStarClassName="tmainRandStar"
+      />
 
       <div className="tmainWrap">
-        <div className="tmainTopbar">
-          <img className="tmainLogo" src={logo} alt="GenAlpha" />
-          <h1 className="tmainTitle tmainTitleInline">Tvé třídy</h1>
-          
-          {/* ⭐ UPRAVENO: Tlačítko nyní volá naši novou funkci handleLogout */}
-          <button className="tmainLogout" onClick={handleLogout}>
-            ⟶ Odhlásit se
-          </button>
+        <AppTopbar
+          onLogout={handleLogout}
+          topbarClassName="tmainTopbar"
+          logoClassName="tmainLogo"
+          actionsClassName="tmainTopActions"
+          logoutButtonClassName="tmainLogout tcdBtn"
+        />
+
+        <div className="tmainHeader">
+          <h1 className="tmainPageTitle">Tvé třídy</h1>
         </div>
 
         {error && <div className="tmainError">{error}</div>}

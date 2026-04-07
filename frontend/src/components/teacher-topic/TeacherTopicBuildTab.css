@@ -1,0 +1,28 @@
+.ttBuildTitle {
+  margin-bottom: 6px;
+}
+
+.ttBuildSubtitle {
+  margin-bottom: 16px;
+}
+
+.ttBuildLabel {
+  font-weight: 800;
+  margin-bottom: 6px;
+  color: #1f2330;
+}
+
+.ttBuildDurationField {
+  margin-bottom: 14px;
+}
+
+.ttBuildDurationInput {
+  max-width: 320px;
+}
+
+.ttBuildTextarea {
+  min-height: 240px;
+  resize: vertical;
+  line-height: 1.45;
+  color: #1f2330;
+}

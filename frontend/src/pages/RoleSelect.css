@@ -1,4 +1,3 @@
-/* důležité: plná výška + plná šířka */
 html, body, #root {
   height: 100%;
 }
@@ -66,19 +65,11 @@ html, body, #root {
   color: #23243a;
 }
 
-.roleSubtitle {
-  margin: 0 auto 34px;
-  max-width: 560px;
-  font-size: 16px;
-  color: rgba(35, 36, 58, 0.72);
-  line-height: 1.5;
-}
-
 .roleGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 420px));
   gap: 22px;
-  justify-content: center;   /* ← aby to bylo uprostřed */
+  justify-content: center;  
   align-items: stretch;
 }
 

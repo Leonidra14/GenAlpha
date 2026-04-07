@@ -163,31 +163,39 @@ export async function generateQuiz(classId, topicId, { mcq, yesno, final_open })
 }
 
 export async function getFinalQuiz(topicId) {
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/quiz/${topicId}`, {
-    headers: {
-      Authorization: `Bearer ${localStorage.getItem("access_token") || ""}`,
-    },
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail || "Quiz load failed");
-  }
-  return await res.json(); // { topic_id, basic_quiz }
+  return apiFetch(`/quiz/${topicId}`);
 }
 
 export async function saveFinalQuiz(topicId, quizJsonString) {
-  const res = await fetch(`${import.meta.env.VITE_API_URL}/quiz/${topicId}/final`, {
+  return apiFetch(`/quiz/${topicId}/final`, {
     method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("access_token") || ""}`,
-    },
     body: JSON.stringify({ quiz_json: quizJsonString }),
   });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err?.detail || "Quiz save failed");
-  }
-  return await res.json(); 
 }
+
+export async function fetchTopicHeader(classId, topicId) {
+  const [cls, topics] = await Promise.all([getClassDetail(classId), getClassTopics(classId)]);
+  const clsLabel =
+    (cls?.custom_name || "").trim() ||
+    (cls?.grade != null && cls?.subject ? `${cls.grade}. třída – ${cls.subject}` : "") ||
+    cls?.subject ||
+    `Třída ${classId}`;
+  const topic = (topics || []).find((x) => String(x.id) === String(topicId));
+  const topicLabel = (topic?.title || "").trim() || `Kapitola ${topicId}`;
+  return { classDetail: cls || null, classTitle: clsLabel, topicTitle: topicLabel };
+}
+
+export const topicNotesApi = {
+  generateNotesWithFiles,
+  regenerateNotes,
+  saveFinalTeacherNotes,
+  saveFinalStudentNotes,
+  getFinalNotes,
+};
+
+export const topicQuizApi = {
+  generateQuiz,
+  getFinalQuiz,
+  saveFinalQuiz,
+};
 

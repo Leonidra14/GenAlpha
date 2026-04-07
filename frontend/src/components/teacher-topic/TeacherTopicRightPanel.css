@@ -1,0 +1,108 @@
+.ttRightPanelSticky {
+  position: sticky;
+  top: 14px;
+  align-self: start;
+  display: grid;
+  gap: 12px;
+}
+
+.ttActionInfo {
+  margin-top: 10px;
+  line-height: 1.35;
+}
+
+.ttUploadDropZone {
+  border: 2px dashed rgba(120, 120, 255, 0.35);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.ttUploadIconBox {
+  display: grid;
+  place-items: center;
+  height: 92px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  margin-bottom: 12px;
+}
+
+.ttUploadIcon {
+  font-size: 32px;
+}
+
+.ttUploadHint {
+  opacity: 0.7;
+  font-size: 13px;
+  margin-top: 8px;
+  color: #1f2330;
+}
+
+.ttFilesList {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ttFileItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.ttFileMeta {
+  min-width: 0;
+}
+
+.ttFileName {
+  font-weight: 800;
+  color: #1f2330;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 230px;
+}
+
+.ttFileSize {
+  opacity: 0.7;
+  font-size: 12px;
+}
+
+.ttFileRemoveBtn {
+  padding: 6px 10px;
+}
+
+.ttDbCardBody {
+  font-size: 13px;
+  opacity: 0.85;
+  color: #1f2330;
+  line-height: 1.35;
+}
+
+.ttDbSecondRow {
+  margin-top: 6px;
+}
+
+.ttFinalHint {
+  margin-bottom: 10px;
+}
+
+.ttRegenTextArea {
+  min-height: 110px;
+  resize: vertical;
+  color: #1f2330;
+}
+
+.ttRegenTextAreaWithTopGap {
+  margin-top: 10px;
+}
+
+.ttRegenBtn {
+  margin-top: 10px;
+}
