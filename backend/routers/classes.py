@@ -98,12 +98,12 @@ def update_class(class_id: int, payload: ClassUpdate, user=Depends(require_teach
     if payload.grade is not None:
         cl.grade = payload.grade
 
-    if payload.custom_name is not None:
-        v = payload.custom_name.strip()
+    if "custom_name" in payload.model_fields_set:
+        v = (payload.custom_name or "").strip()
         cl.custom_name = v if v else None
 
-    if payload.note is not None:
-        v = payload.note.strip()
+    if "note" in payload.model_fields_set:
+        v = (payload.note or "").strip()
         cl.note = v if v else None
 
     if payload.active is not None:

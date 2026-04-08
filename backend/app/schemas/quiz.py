@@ -30,7 +30,7 @@ class QuizQuestion(BaseModel):
                 raise ValueError("mcq/yesno difficulty must be 1-3")
         return v
 
-    @field_validator("options")
+    @field_validator("options", mode="before")
     @classmethod
     def validate_options(cls, v, info):
         t = info.data.get("type")
@@ -38,6 +38,9 @@ class QuizQuestion(BaseModel):
             return None
         if v is None:
             raise ValueError("options required for mcq/yesno")
+
+        if isinstance(v, dict):
+            v = {str(k).upper(): val for k, val in v.items()}
 
         if t == "mcq":
             if set(v.keys()) != {"A", "B", "C", "D"}:
@@ -49,7 +52,7 @@ class QuizQuestion(BaseModel):
                 raise ValueError('yesno options must be A="ano", B="ne"')
         return v
 
-    @field_validator("correct_answer")
+    @field_validator("correct_answer", mode="before")
     @classmethod
     def validate_correct_answer(cls, v, info):
         t = info.data.get("type")
@@ -57,9 +60,13 @@ class QuizQuestion(BaseModel):
             return None
         if not v:
             raise ValueError("correct_answer required for mcq/yesno")
+        
+        if isinstance(v, str):
+            v = v.upper()
+
         opts = info.data.get("options") or {}
         if v not in opts:
-            raise ValueError("correct_answer must be one of the option keys")
+            raise ValueError(f"correct_answer '{v}' must be one of the option keys")
         return v
 
     @field_validator("explanation")
