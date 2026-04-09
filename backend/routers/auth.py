@@ -3,7 +3,6 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 import secrets 
-import jwt 
 
 from database.database import get_db
 from app.schemas.auth import RegisterIn, LoginIn, TokenOut, MeOut

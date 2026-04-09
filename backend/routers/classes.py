@@ -17,7 +17,11 @@ from models.topics import Topic
 from app.schemas.topics import TopicOut
 from models.topic_progress import TopicProgress
 from app.schemas.students import StudentClassDetailOut
-from app.schemas.topic_progress import TopicWithProgressOut, TopicProgressUpdateIn
+from app.schemas.topic_progress import (
+    StudentTopicDetailOut,
+    TopicWithProgressOut,
+    TopicProgressUpdateIn,
+)
 
 
 
@@ -251,6 +255,36 @@ def student_class_topics(class_id: int, user=Depends(require_student), db: Sessi
         )
 
     return out
+
+
+@router.get("/student/classes/{class_id}/topics/{topic_id}", response_model=StudentTopicDetailOut)
+def student_topic_detail(
+    class_id: int,
+    topic_id: int,
+    user=Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    enr = db.query(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.student_id == user.id,
+    ).first()
+    if not enr:
+        raise HTTPException(status_code=403, detail="Not enrolled in this class")
+
+    topic = db.query(Topic).filter(
+        Topic.id == topic_id,
+        Topic.class_id == class_id,
+    ).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+
+    quiz_available = bool((topic.basic_quiz or "").strip())
+    return StudentTopicDetailOut(
+        topic_id=topic.id,
+        title=topic.title,
+        student_notes_md=topic.student_notes_md or "",
+        quiz_available=quiz_available,
+    )
 
 @router.put("/student/topics/{topic_id}/progress", response_model=dict)
 def student_set_topic_done(

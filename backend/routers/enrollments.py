@@ -68,22 +68,9 @@ def remove_student_from_class(
     class_id: int,
     student_id: int,
     db: Session = Depends(get_db),
-    teacher=Depends(require_teacher),
+    user=Depends(require_teacher),
 ):
-    cls = (
-        db.query(Class)
-        .filter(Class.id == class_id, Class.teacher_id == teacher.id)
-        .first()
-    )
-    if not cls:
-        raise HTTPException(status_code=404, detail="Class not found")
-
-    existing = (
-        db.query(Enrollment.class_id, Enrollment.student_id, Enrollment.id)
-        .filter(Enrollment.class_id == class_id)
-        .all()
-    )
-    print("DEBUG enrollments for class", class_id, "=>", existing)
+    ensure_teacher_owns_class(db, class_id, user.id)
 
     deleted_rows = (
         db.query(Enrollment)
@@ -133,15 +120,9 @@ def available_students_for_class(
     class_id: int,
     q: Optional[str] = None,  # query pro hledání
     db: Session = Depends(get_db),
-    teacher=Depends(require_teacher),
+    user=Depends(require_teacher),
 ):
-    cls = (
-        db.query(Class)
-        .filter(Class.id == class_id, Class.teacher_id == teacher.id)
-        .first()
-    )
-    if not cls:
-        raise HTTPException(status_code=404, detail="Class not found")
+    ensure_teacher_owns_class(db, class_id, user.id)
 
     # subquery: student_id kteří už jsou zapsaní
     enrolled_subq = select(Enrollment.student_id).filter(Enrollment.class_id == class_id)
@@ -171,16 +152,9 @@ def enroll_existing_student(
     class_id: int,
     student_id: int,
     db: Session = Depends(get_db),
-    teacher=Depends(require_teacher),
+    user=Depends(require_teacher),
 ):
-    # ověř, že třída patří učiteli
-    cls = (
-        db.query(Class)
-        .filter(Class.id == class_id, Class.teacher_id == teacher.id)
-        .first()
-    )
-    if not cls:
-        raise HTTPException(status_code=404, detail="Class not found")
+    ensure_teacher_owns_class(db, class_id, user.id)
 
     # ověř, že student existuje a je role student
     student = (

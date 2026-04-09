@@ -7,7 +7,7 @@ from models.classes import Class
 from models.topics import Topic
 from app.schemas.topic_notes import FinalNotesPatchIn, FinalNotesOut  # ✅ přidán FinalNotesOut
 
-router = APIRouter()
+router = APIRouter() 
 
 
 def _assert_teacher_owns_topic(db: Session, class_id: int, topic_id: int, teacher_id: int) -> Topic:

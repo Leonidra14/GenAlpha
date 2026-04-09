@@ -18,3 +18,10 @@ class TopicWithProgressOut(BaseModel):
 
 class TopicProgressUpdateIn(BaseModel):
     done: bool
+
+
+class StudentTopicDetailOut(BaseModel):
+    topic_id: int
+    title: str
+    student_notes_md: str
+    quiz_available: bool

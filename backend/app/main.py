@@ -17,8 +17,7 @@ from models.enrollments import Enrollment
 from models.topics import Topic  
 from models.enrollments import Enrollment  
 from models.topic_progress import TopicProgress
-
-
+from models.quiz_attempts import QuizAttempt
 
 
 # vytvoření tabulek
