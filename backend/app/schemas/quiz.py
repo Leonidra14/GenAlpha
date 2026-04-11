@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -170,6 +171,32 @@ class QuizFinishOut(BaseModel):
     total_score: float
     max_score: float
     question_count: int
+
+
+class QuizAttemptAnswerStudentRowOut(BaseModel):
+    """Student results row: no explanation (leaks correct choice for closed types)."""
+
+    question_id: str
+    prompt: str
+    type: QuizQuestionType
+    student_answer: str
+    is_correct: bool
+    score_delta: float
+    feedback: Optional[str] = None
+
+
+class QuizAttemptDetailStudentOut(BaseModel):
+    """Sanitized finished attempt for the owning student (results UI)."""
+
+    attempt_id: str
+    finished_at: datetime
+    score: float
+    max_score: float
+    question_count: int
+    duration_sec: int
+    correct_count: int
+    incorrect_count: int
+    answers: List[QuizAttemptAnswerStudentRowOut]
 
 
 class FinalOpenCriterionEval(BaseModel):

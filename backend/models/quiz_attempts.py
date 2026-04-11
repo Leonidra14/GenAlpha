@@ -1,15 +1,18 @@
-import uuid
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Identity, Integer, JSON
 
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, JSON, Uuid
 from database.database import Base
 
 
 class QuizAttempt(Base):
-    """Jeden dokončený pokus o kvíz; zápis jednorázově při finish (ERD: quiz_attempts)."""
+    """
+    Primární klíč `id` se generuje výhradně v databázi (SERIAL / IDENTITY).
+    Při vkládání nového řádku v kódu nikdy nepredávej `id` — SQLAlchemy ho z INSERTu vynechá
+    a PostgreSQL doplní další hodnotu sekvence.
+    """
 
     __tablename__ = "quiz_attempts"
 
-    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, Identity(), primary_key=True)
 
     class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False, index=True)
     topic_id = Column(Integer, ForeignKey("topics.id", ondelete="CASCADE"), nullable=False, index=True)

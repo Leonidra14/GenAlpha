@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 import threading
 import uuid
@@ -22,6 +23,8 @@ from models.topic_progress import TopicProgress
 
 from app.core.openai_client import get_openai_client as get_client
 from app.schemas.quiz import (
+    QuizAttemptAnswerStudentRowOut,
+    QuizAttemptDetailStudentOut,
     QuizFinishOut,
     QuizOut,
     QuizQuestion,
@@ -134,13 +137,126 @@ def _compute_finish_summary(attempt_id: str, state: QuizAttemptRuntime) -> QuizF
     )
 
 
+def _coerce_stored_answer_rows(raw: Any) -> List[Dict[str, Any]]:
+    """Normalize answers_json from DB: SQLAlchemy JSON vs plain TEXT may be list or str."""
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return []
+        try:
+            parsed = json.loads(s)
+        except json.JSONDecodeError:
+            return []
+    else:
+        parsed = raw
+    if not isinstance(parsed, list):
+        return []
+    return [item for item in parsed if isinstance(item, dict)]
+
+
+def _max_score_from_stored_answers(answers_json: List[Dict[str, Any]]) -> float:
+    total = 0.0
+    for a in answers_json:
+        t = a.get("type")
+        total += 15.0 if t == "final_open" else 1.0
+    return total
+
+
+def _parse_attempt_db_pk(attempt_id: str) -> int:
+    try:
+        return int(str(attempt_id).strip(), 10)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=404, detail="Quiz attempt not found")
+
+
+def _build_student_attempt_detail(
+    attempt: QuizAttempt,
+    basic_quiz_raw: str,
+) -> QuizAttemptDetailStudentOut:
+    answers_json = _coerce_stored_answer_rows(attempt.answers_json)
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for row in answers_json:
+        qid = str(row.get("question_id", ""))
+        if qid:
+            by_id[qid] = row
+
+    answer_rows: List[QuizAttemptAnswerStudentRowOut] = []
+    raw = (basic_quiz_raw or "").strip()
+    quiz_out: Optional[QuizOut] = None
+    if raw:
+        try:
+            quiz_out = parse_quiz_json_to_quiz_out(raw)
+        except ValueError:
+            quiz_out = None
+
+    if quiz_out:
+        for q in quiz_out.questions:
+            ans = by_id.get(q.id)
+            if not ans:
+                continue
+            q_type = q.type
+            fb = None
+            if q_type == "final_open":
+                fb_raw = ans.get("feedback")
+                fb = (str(fb_raw).strip() if fb_raw is not None else "") or None
+            answer_rows.append(
+                QuizAttemptAnswerStudentRowOut(
+                    question_id=q.id,
+                    prompt=q.prompt,
+                    type=q_type,
+                    student_answer=str(ans.get("answer") or ""),
+                    is_correct=bool(ans.get("is_correct")),
+                    score_delta=float(ans.get("score_delta") or 0.0),
+                    feedback=fb,
+                )
+            )
+    else:
+        for ans in answers_json:
+            qid = str(ans.get("question_id", ""))
+            q_type = ans.get("type")
+            if q_type not in ("mcq", "yesno", "final_open"):
+                continue
+            fb = None
+            if q_type == "final_open":
+                fb_raw = ans.get("feedback")
+                fb = (str(fb_raw).strip() if fb_raw is not None else "") or None
+            answer_rows.append(
+                QuizAttemptAnswerStudentRowOut(
+                    question_id=qid,
+                    prompt="",
+                    type=q_type,
+                    student_answer=str(ans.get("answer") or ""),
+                    is_correct=bool(ans.get("is_correct")),
+                    score_delta=float(ans.get("score_delta") or 0.0),
+                    feedback=fb,
+                )
+            )
+
+    correct_count = sum(1 for r in answer_rows if r.is_correct)
+    incorrect_count = len(answer_rows) - correct_count
+    max_score = _max_score_from_stored_answers(answers_json)
+
+    return QuizAttemptDetailStudentOut(
+        attempt_id=str(attempt.id),
+        finished_at=attempt.finished_at,
+        score=float(attempt.score),
+        max_score=max_score,
+        question_count=len(answers_json),
+        duration_sec=int(attempt.duration_sec),
+        correct_count=correct_count,
+        incorrect_count=incorrect_count,
+        answers=answer_rows,
+    )
+
+
 def _persist_finished_attempt(
     db: Session,
     *,
-    attempt_uuid: str,
     state: QuizAttemptRuntime,
     summary: QuizFinishOut,
-) -> None:
+) -> int:
     finished_at = datetime.now(timezone.utc)
     duration_sec = max(
         0,
@@ -172,8 +288,8 @@ def _persist_finished_attempt(
                 }
             )
 
+    # QuizAttempt.id má Identity() — DB generuje PK; neposílat uuid ani ruční id.
     attempt_row = QuizAttempt(
-        id=uuid.UUID(attempt_uuid),
         student_id=state.student_id,
         class_id=state.class_id,
         topic_id=state.topic_id,
@@ -185,6 +301,7 @@ def _persist_finished_attempt(
         mistakes_json=mistakes_list,
     )
     db.add(attempt_row)
+    db.flush()
 
     prog = (
         db.query(TopicProgress)
@@ -206,6 +323,8 @@ def _persist_finished_attempt(
     prev_best = prog.quiz_best_score
     if prev_best is None or summary.total_score > prev_best:
         prog.quiz_best_score = summary.total_score
+
+    return int(attempt_row.id)
 
 
 class QuizGenerateIn(BaseModel):
@@ -451,6 +570,10 @@ def student_quiz_submit_answer(
         if state.class_id != class_id or state.topic_id != topic_id:
             raise HTTPException(status_code=404, detail="Quiz attempt not found")
 
+        state = _get_attempt_locked(attempt_id, student.id)
+        if state.class_id != class_id or state.topic_id != topic_id:
+            raise HTTPException(status_code=404, detail="Quiz attempt not found")
+
         if state.finished:
             raise HTTPException(status_code=400, detail="Pokus je již uzavřen.")
 
@@ -521,6 +644,9 @@ def student_quiz_submit_answer(
         state = _get_attempt_locked(attempt_id, student.id)
         if state.class_id != class_id or state.topic_id != topic_id:
             raise HTTPException(status_code=404, detail="Quiz attempt not found")
+        state = _get_attempt_locked(attempt_id, student.id)
+        if state.class_id != class_id or state.topic_id != topic_id:
+            raise HTTPException(status_code=404, detail="Quiz attempt not found")
         if state.finished:
             raise HTTPException(status_code=400, detail="Pokus je již uzavřen.")
         if payload.question_id in state.answers:
@@ -578,14 +704,52 @@ def student_quiz_finish(
 
         summary = _compute_finish_summary(attempt_id, state)
         try:
-            _persist_finished_attempt(
-                db, attempt_uuid=attempt_id, state=state, summary=summary
-            )
+            row_id = _persist_finished_attempt(db, state=state, summary=summary)
             db.commit()
         except Exception:
             db.rollback()
             raise
+        final_summary = QuizFinishOut(
+            attempt_id=str(row_id),
+            total_score=summary.total_score,
+            max_score=summary.max_score,
+            question_count=summary.question_count,
+        )
         state.finished = True
-        state.finish_summary = summary
+        state.finish_summary = final_summary
 
-    return summary
+    return state.finish_summary
+
+
+@router.get(
+    "/{class_id}/{topic_id}/my-attempts/{attempt_id}",
+    response_model=QuizAttemptDetailStudentOut,
+    response_model_exclude_none=True,
+)
+def get_student_quiz_attempt_detail(
+    class_id: int,
+    topic_id: int,
+    attempt_id: str,
+    db: Session = Depends(get_db),
+    student=Depends(require_student),
+):
+    _require_enrolled_student(db, class_id=class_id, student_id=student.id)
+    topic = _load_topic_for_student(db, class_id=class_id, topic_id=topic_id)
+
+    aid = _parse_attempt_db_pk(attempt_id)
+    attempt = (
+        db.query(QuizAttempt)
+        .filter(
+            QuizAttempt.id == aid,
+            QuizAttempt.class_id == class_id,
+            QuizAttempt.topic_id == topic_id,
+            QuizAttempt.finished_at.isnot(None),
+        )
+        .first()
+    )
+    if not attempt:
+        raise HTTPException(status_code=404, detail="Quiz attempt not found")
+    if attempt.student_id != student.id:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    return _build_student_attempt_detail(attempt, topic.basic_quiz or "")
