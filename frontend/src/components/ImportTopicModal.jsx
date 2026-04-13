@@ -19,7 +19,6 @@ export default function ImportTopicModal({ open, onClose, targetClassId, onImpor
 
     getTeacherClasses()
       .then((data) => {
-        // nechci nabízet cílovou třídu jako zdroj
         setClasses(data.filter((c) => String(c.id) !== String(targetClassId)));
       })
       .catch((e) => setError(e.message))
@@ -52,7 +51,7 @@ export default function ImportTopicModal({ open, onClose, targetClassId, onImpor
       setError("");
       setLoading(true);
       await importTopic(targetClassId, Number(sourceTopicId));
-      onImported?.(); // typicky load()
+      onImported?.();
       onClose();
     } catch (e) {
       setError(e.message || "Import se nezdařil");
@@ -63,9 +62,9 @@ export default function ImportTopicModal({ open, onClose, targetClassId, onImpor
 
   return (
     <Modal open={open} onClose={onClose} title="Nahrát kapitolu z jiné třídy">
-      {error && <div className="error">{error}</div>}
+      {error && <div className="gaModalError">{error}</div>}
 
-      <div style={{ display: "grid", gap: 12 }}>
+      <div className="gaModalStack">
         <label>
           Zdrojová třída
           <select value={sourceClassId} onChange={(e) => setSourceClassId(e.target.value)}>
@@ -94,11 +93,11 @@ export default function ImportTopicModal({ open, onClose, targetClassId, onImpor
           </select>
         </label>
 
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-          <button className="btn-secondary" onClick={onClose} disabled={loading}>
+        <div className="gaModalActions">
+          <button type="button" className="tcdBtn" onClick={onClose} disabled={loading}>
             Zrušit
           </button>
-          <button className="btn-primary" onClick={handleImport} disabled={loading}>
+          <button type="button" className="tcdBtn primary" onClick={handleImport} disabled={loading}>
             {loading ? "Načítám..." : "Nahrát"}
           </button>
         </div>

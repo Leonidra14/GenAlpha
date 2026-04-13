@@ -29,8 +29,8 @@ html, body, #root { height: 100%; }
 .tcdLabs{
   right: 28px;
   bottom: 18px;
-  width: 160px;
-  opacity: .55;
+  width: var(--gaDecorLabsWidth);
+  opacity: var(--gaDecorLabsOpacity);
   z-index:1;
 }
 
@@ -79,6 +79,22 @@ html, body, #root { height: 100%; }
   font-weight: 900;
   color:#23243a;
   letter-spacing:-0.02em;
+}
+
+.tcdHeaderActions{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.tcdHeaderButtons{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .tcdSubtitle{
@@ -140,13 +156,34 @@ html, body, #root { height: 100%; }
   min-width: 260px;
 }
 
-.tcdInput{
+/*
+ * Sdílené textové pole: input / textarea / select ve stránkách importujících tento soubor.
+ * Modály používají .gaModalInput* (viz styles/modal.css); kvíz žáka .sqs* (viz StudentQuizSession.css).
+ */
+.tcdInput {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border: 0;
   outline: none;
   background: transparent;
   font-size: 14px;
-  color: rgba(35,36,58,0.9);
+  color: rgba(35, 36, 58, 0.9);
+  color-scheme: light;
+}
+
+.tcdInput[type="number"]{
+  text-align: right;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* Šedé WebKit šipky u type="number" — skryté; zadání pořád funguje, šipky na klávesnici také */
+.tcdInput[type="number"]::-webkit-outer-spin-button,
+.tcdInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .tcdInput::placeholder{
@@ -190,6 +227,11 @@ html, body, #root { height: 100%; }
   opacity: .72;
 }
 
+.tcdTopicBusy{
+  opacity: .8;
+  pointer-events: none;
+}
+
 .tcdTopicLeft{
   display:flex;
   align-items:center;
@@ -231,6 +273,10 @@ html, body, #root { height: 100%; }
   display:inline-block;
 }
 
+.tcdLoading--darkText{
+  color: #000;
+}
+
 .tcdError{
   padding: 10px 12px;
   border-radius: 14px;
@@ -249,7 +295,421 @@ html, body, #root { height: 100%; }
   margin-bottom: 12px;
 }
 
+.stdTopicLayout{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 14px;
+  align-items: start;
+}
+
+.stdTopicRightCol{
+  display: grid;
+  gap: 12px;
+}
+
+.stdTopicQuizHeader{
+  margin-bottom: 0;
+}
+
+.stdTopicQuizHeader + .stdTopicQuizHeader{
+  margin-top: 12px;
+}
+
+.stdTopicQuizColumns{
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 12px 18px;
+  margin-top: 2px;
+}
+
+.stdTopicQuizCardMain{
+  flex: 1;
+  min-width: 0;
+}
+
+.stdTopicQuizCardMain > .stdTopicQuizIntroText{
+  margin-top: 0;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.stdTopicQuizCardArt{
+  flex: 0 0 clamp(120px, 44%, 240px);
+  max-width: 240px;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+  user-select: none;
+}
+
+.stdTopicQuizRobotImg{
+  width: 100%;
+  height: auto;
+  max-height: 260px;
+  object-fit: contain;
+  object-position: center center;
+  display: block;
+  filter: drop-shadow(0 10px 18px rgba(40, 60, 140, 0.12));
+}
+
+.stdTopicHint{
+  margin-top: 8px;
+}
+
+/* Hint nad tlačítkem (hlavní / bonus kvíz) — stejná typografie jako .tcdEmpty + .stdTopicHint */
+.stdTopicHint--beforeBtn{
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
+.stdAttemptsList{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stdAttemptsRow{
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(120, 130, 200, 0.22);
+  display: grid;
+  gap: 8px;
+}
+
+.stdAttemptsRowMain{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 8px 12px;
+  font-weight: 800;
+  color: #23243a;
+}
+
+.stdAttemptsScore{
+  font-variant-numeric: tabular-nums;
+}
+
+.stdAttemptsRowMeta{
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px 14px;
+  font-size: 0.9rem;
+  color: #3a3d5c;
+  font-variant-numeric: tabular-nums;
+}
+
+.stdAttemptsDur{
+  color: #5a5e88;
+}
+
+.stdLbPodium{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stdLbPodiumRow{
+  margin: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px 14px;
+}
+
+.stdLbMedalWrap{
+  flex-shrink: 0;
+  width: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stdLbMedalSvg{
+  display: block;
+  flex-shrink: 0;
+}
+
+.stdLbPodiumBody{
+  flex: 1;
+  min-width: 0;
+}
+
+.stdLbPodiumName{
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: #23243a;
+  line-height: 1.25;
+}
+
+.stdLbPodiumScore{
+  margin-top: 2px;
+  font-size: 0.9rem;
+  color: #3a3d5c;
+  font-variant-numeric: tabular-nums;
+}
+
+.stdLbDivider{
+  border: none;
+  border-top: 1px solid rgba(90, 120, 200, 0.22);
+  margin: 14px 0 12px;
+}
+
+.stdLbMine{
+  padding-top: 2px;
+}
+
+.stdLbMineLine{
+  margin: 0;
+  font-size: 0.95rem;
+  color: #23243a;
+  line-height: 1.45;
+}
+
+.stdLbMineLine--muted{
+  color: #5a5e88;
+  font-weight: 600;
+}
+
+.stdLbMineLabel{
+  font-weight: 700;
+  color: #4a4d7a;
+}
+
+.stdLbMineRank{
+  font-variant-numeric: tabular-nums;
+}
+
+.stdTopicNotesBody{
+  color: #111111;
+}
+
+.stdTopicNotesBody h1,
+.stdTopicNotesBody h2,
+.stdTopicNotesBody h3,
+.stdTopicNotesBody h4,
+.stdTopicNotesBody h5,
+.stdTopicNotesBody h6,
+.stdTopicNotesBody p,
+.stdTopicNotesBody li,
+.stdTopicNotesBody strong,
+.stdTopicNotesBody em,
+.stdTopicNotesBody a,
+.stdTopicNotesBody code{
+  color: #111111;
+}
+
+/* teacher topic — quiz náhled */
+.ttQuizPreview{
+  display: grid;
+  gap: 14px;
+}
+
+.ttQuizQCard{
+  background: rgba(255,255,255,0.88);
+  border: 1px solid rgba(90,120,200,0.2);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 22px rgba(26,52,120,0.06);
+}
+
+.ttQuizQHead{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.ttQuizQNum{
+  flex-shrink: 0;
+  min-width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(35,36,58,0.9);
+  background: linear-gradient(145deg, rgba(230,235,255,0.95), rgba(245,247,255,0.9));
+  border: 1px solid rgba(120,130,200,0.28);
+  border-radius: 10px;
+}
+
+.ttQuizQMeta{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.ttQuizBadge{
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(100,120,220,0.12);
+  color: rgba(45,55,120,0.9);
+  border: 1px solid rgba(100,120,220,0.22);
+}
+
+.ttQuizBadgeDiff{
+  background: rgba(80,160,120,0.12);
+  border-color: rgba(80,160,120,0.25);
+  color: rgba(25,85,55,0.95);
+}
+
+.ttQuizPrompt{
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: rgba(31,35,48,0.95);
+}
+
+.ttQuizOpts{
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ttQuizOpt{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(248,249,255,0.85);
+  border: 1px solid rgba(120,130,180,0.15);
+  font-size: 14px;
+  line-height: 1.4;
+  color: rgba(31,35,48,0.92);
+}
+
+.ttQuizOptCorrect{
+  background: rgba(220,245,230,0.65);
+  border-color: rgba(80,160,100,0.35);
+}
+
+.ttQuizOptKey{
+  flex-shrink: 0;
+  font-weight: 800;
+  min-width: 1.25rem;
+  color: rgba(45,55,120,0.85);
+}
+
+.ttQuizYesNoRow{
+  margin-top: 6px;
+  font-size: 14px;
+  color: rgba(31,35,48,0.88);
+}
+
+.ttQuizExplain{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(120,130,180,0.28);
+  font-size: 13px;
+  line-height: 1.5;
+  font-style: italic;
+  color: rgba(35,36,58,0.72);
+}
+
+.ttQuizOpenHint{
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgba(35,36,58,0.65);
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,248,230,0.7);
+  border: 1px solid rgba(200,170,90,0.25);
+}
+
+.tcdConfirmModalBody {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: rgba(35, 36, 58, 0.88);
+}
+
+.ttdTopicDetailPage {
+  overflow-x: auto;
+}
+
+.ttTopicDetailLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ttTopicDetailMain {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ttTopicDetailMain .tcdCard {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.ttTopicDetailMain .tcdField {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ttTopicDetailMain .tcdTopic {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+}
+
+.ttTopicDetailMain .tcdTopicLeft {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.ttTopicDetailMain .tcdTopicTitle {
+  max-width: 100%;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+}
+
+.ttTopicDetailMain .tcdTopicActions {
+  flex-shrink: 0;
+}
+
+.ttTopicDetailSidebar {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @media (max-width: 720px){
   .tcdField{ width: 100%; min-width: 0; }
   .tcdTopicTitle{ max-width: 240px; }
+  .stdTopicLayout{ grid-template-columns: 1fr; }
 }

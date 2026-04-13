@@ -1,4 +1,4 @@
-import re
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.core.utils import sanitize_text, validate_password_spaces
@@ -20,9 +20,16 @@ class RegisterIn(BaseModel):
     
 
 class LoginIn(BaseModel):
-    email: EmailStr
+    """E-mail (učitelé) nebo přihlašovací jméno žáka (příjmení + id, např. koroptvicka15)."""
+
+    login: str = Field(..., min_length=1, max_length=255)
     password: str = Field(min_length=1, max_length=72)
-    #validator
+
+    @field_validator("login", mode="before")
+    @classmethod
+    def strip_login(cls, v: str) -> str:
+        return sanitize_text(v) if isinstance(v, str) else v
+
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
@@ -38,5 +45,6 @@ class MeOut(BaseModel):
     id: int
     first_name: str
     last_name: str
-    email: EmailStr
+    email: Optional[EmailStr] = None
+    login_key: Optional[str] = None
     role: str

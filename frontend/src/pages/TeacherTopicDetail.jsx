@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import "./TeacherClassDetail.css";
+import "../styles/topic-common.css";
 
 import clouds from "../assets/clouds.png";
 import labs from "../assets/lab_books.png";
@@ -18,6 +19,7 @@ import { useFileAttachments } from "../hooks/teacher-topic/useFileAttachments";
 import { useTopicNotesWorkflow } from "../hooks/teacher-topic/useTopicNotesWorkflow";
 import { useTopicQuizWorkflow } from "../hooks/teacher-topic/useTopicQuizWorkflow";
 import { useRandomDecorations } from "../hooks/useRandomDecorations";
+import { backgroundDecorPresets } from "../constants/backgroundDecorPresets";
 import { useLogout } from "../hooks/useLogout";
 import AppTopbar from "../components/layout/AppTopbar";
 import AppBackgroundDecor from "../components/layout/AppBackgroundDecor";
@@ -25,6 +27,20 @@ import TopicTabs from "../components/teacher-topic/TopicTabs";
 import VersionHistoryCard from "../components/teacher-topic/VersionHistoryCard";
 import TeacherTopicBuildTab from "../components/teacher-topic/TeacherTopicBuildTab";
 import TeacherTopicRightPanel from "../components/teacher-topic/TeacherTopicRightPanel";
+import Modal from "../components/Modal";
+
+function quizTypeLabelCs(type) {
+  switch (type) {
+    case "mcq":
+      return "Výběr z možností";
+    case "yesno":
+      return "Ano / Ne";
+    case "final_open":
+      return "Otevřená otázka";
+    default:
+      return String(type || "—");
+  }
+}
 
 export default function TeacherTopicDetail() {
   const { classId, topicId } = useParams();
@@ -46,6 +62,8 @@ export default function TeacherTopicDetail() {
 
   // metadata collapsible
   const [showMeta, setShowMeta] = useState(false);
+
+  const [backConfirmOpen, setBackConfirmOpen] = useState(false);
 
   const { files, fileInputRef, onFilesChange, removeFileAt, clearFiles } = useFileAttachments(setError);
   const notes = useTopicNotesWorkflow({
@@ -127,23 +145,16 @@ export default function TeacherTopicDetail() {
   } = quiz;
   const hasDbTeacher = !!dbTeacherVersionId;
   const hasDbStudent = !!dbStudentVersionId;
+  const hasMultipleVersions = history.length > 1 || quizHistory.length > 1;
 
   const logout = useLogout();
 
   // decorace
   const randomDecos = useRandomDecorations({
-    seed: 123,
+    ...backgroundDecorPresets.classTopicDetail,
     starSrc: star,
     flightSrc: flight,
   });
-
-  // layout 2 sloupců
-  const twoCol = {
-    display: "grid",
-    gridTemplateColumns: "1fr 360px",
-    gap: 14,
-    alignItems: "start",
-  };
 
   const paperBox = {
     background: "rgba(255,255,255,0.72)",
@@ -153,6 +164,8 @@ export default function TeacherTopicDetail() {
     color: "#1f2330",
     lineHeight: 1.6,
     overflowX: "auto",
+    maxWidth: "100%",
+    boxSizing: "border-box",
   };
 
   const codeTextareaStyle = {
@@ -162,6 +175,8 @@ export default function TeacherTopicDetail() {
       "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
     lineHeight: 1.5,
     color: "#1f2330",
+    maxWidth: "100%",
+    boxSizing: "border-box",
   };
 
   const noNotesYet =
@@ -177,6 +192,19 @@ export default function TeacherTopicDetail() {
     await onRegenerateQuiz(userNote, () => setUserNote(""));
   }
 
+  function confirmNavigateBackToClass() {
+    setBackConfirmOpen(false);
+    navigate(`/teacher/classes/${classId}`);
+  }
+
+  function handleBackToClass() {
+    if (hasMultipleVersions) {
+      setBackConfirmOpen(true);
+      return;
+    }
+    navigate(`/teacher/classes/${classId}`);
+  }
+
   useEffect(() => {
     if (!error || !error.startsWith("✅")) return undefined;
     const timer = setTimeout(() => setError(""), 15000);
@@ -184,7 +212,7 @@ export default function TeacherTopicDetail() {
   }, [error]);
 
   return (
-    <div className="tcdPage">
+    <div className="tcdPage ttdTopicDetailPage">
       <AppBackgroundDecor
         cloudsSrc={clouds}
         labsSrc={labs}
@@ -220,7 +248,7 @@ export default function TeacherTopicDetail() {
               hasAnyOutput={hasAnyOutput}
               hasDbTeacher={hasDbTeacher}
               hasDbStudent={hasDbStudent}
-              onBack={() => navigate(`/teacher/classes/${classId}`)}
+              onBack={handleBackToClass}
             />
           </div>
         </div>
@@ -235,9 +263,8 @@ export default function TeacherTopicDetail() {
           </div>
         )}
 
-        <div style={twoCol}>
-          {/* LEFT */}
-          <div style={{ display: "grid", gap: 12 }}>
+        <div className="ttTopicDetailLayout">
+          <div className="ttTopicDetailMain">
             {/* HISTORY: v Tvorbě jen mazání */}
             {tab === "build" && (
               <VersionHistoryCard
@@ -314,7 +341,7 @@ export default function TeacherTopicDetail() {
                         <option key={h.id} value={h.id}>
                           {`Verze ${history.length - idx} — ${h.label} — ${formatTime(
                             h.createdAt
-                          )}`}
+                          )}${dbStudentVersionId === h.id ? " ✅ (trvale uloženo)" : ""}`}
                         </option>
                       ))}
                     </select>
@@ -429,7 +456,7 @@ export default function TeacherTopicDetail() {
                         <option key={h.id} value={h.id}>
                           {`Verze ${history.length - idx} — ${h.label} — ${formatTime(
                             h.createdAt
-                          )}`}
+                          )}${dbTeacherVersionId === h.id ? " ✅ (trvale uloženo)" : ""}`}
                         </option>
                       ))}
                     </select>
@@ -496,7 +523,7 @@ export default function TeacherTopicDetail() {
                         onClick={() => setIsEditingQuiz(true)}
                         disabled={!activeQuizVersionId}
                       >
-                        ✏️ Upravit JSON
+                        ✏️ Upravit Kvíz
                       </button>
                     ) : (
                       <button
@@ -550,12 +577,12 @@ export default function TeacherTopicDetail() {
                   </div>
 
                   <button
-                    className="tcdBtn primary"
+                    className="tcdBtn primary ttFullWidth"
                     type="button"
                     onClick={onGenerateQuiz}
                     disabled={quizLoading}
                   >
-                    {quizLoading ? "Generuji kvíz…" : "✨ Vygenerovat kvíz z poznámek"}
+                    {quizLoading ? "Generuji…" : "Spustit generování"}
                   </button>
                 </div>
 
@@ -579,7 +606,7 @@ export default function TeacherTopicDetail() {
                     <option key={h.id} value={h.id}>
                       {`Verze ${quizHistory.length - idx} — ${h.label} — ${formatTime(
                         h.createdAt
-                      )}${dbQuizVersionId === h.id ? " ✅(DB)" : ""}`}
+                      )}${dbQuizVersionId === h.id ? " ✅ (trvale uloženo) " : ""}`}
                     </option>
                   ))}
                 </select>
@@ -592,51 +619,75 @@ export default function TeacherTopicDetail() {
                         try {
                           parsed = safeParseJson(quizDraftJson);
                         } catch {
-                          return <div style={{ opacity: 0.75 }}>Neplatný JSON.</div>;
+                          return <div style={{ opacity: 0.75 }}>Neplatný JSON — přepni na „Upravit (JSON)“ a oprav strukturu.</div>;
                         }
                         const qs = parsed?.questions || [];
                         if (!qs.length) return <div style={{ opacity: 0.75 }}>— žádné otázky —</div>;
 
                         return (
-                          <div style={{ display: "grid", gap: 10 }}>
-                            {qs.map((q, i) => (
-                              <div
-                                key={q.id || i}
-                                style={{
-                                  background: "rgba(255,255,255,0.7)",
-                                  border: "1px solid rgba(0,0,0,0.08)",
-                                  borderRadius: 14,
-                                  padding: 12,
-                                }}
-                              >
-                                <div style={{ fontWeight: 900, marginBottom: 6 }}>
-                                  {i + 1}. ({q.type}, diff {q.difficulty}) {q.prompt}
-                                </div>
-
-                                {q.type === "mcq" && q.options && (
-                                  <div style={{ display: "grid", gap: 4, marginTop: 6 }}>
-                                    {["A", "B", "C", "D"].map((k) => (
-                                      <div key={k} style={{ opacity: q.correct_answer === k ? 1 : 0.85 }}>
-                                        <b>{k}:</b> {q.options?.[k]}
-                                        {q.correct_answer === k ? " ✅" : ""}
+                          <div className="ttQuizPreview">
+                            {qs.map((q, i) => {
+                              const optKeys =
+                                q.type === "mcq"
+                                  ? ["A", "B", "C", "D"]
+                                  : q.type === "yesno"
+                                    ? ["A", "B"]
+                                    : [];
+                              return (
+                                <article key={q.id || i} className="ttQuizQCard">
+                                  <div className="ttQuizQHead">
+                                    <span className="ttQuizQNum" aria-hidden="true">
+                                      {i + 1}
+                                    </span>
+                                    <div style={{ flex: "1 1 200px", minWidth: 0 }}>
+                                      <div className="ttQuizQMeta">
+                                        <span className="ttQuizBadge">{quizTypeLabelCs(q.type)}</span>
+                                        <span className="ttQuizBadge ttQuizBadgeDiff">
+                                          náročnost {q.difficulty ?? "—"}
+                                        </span>
                                       </div>
-                                    ))}
+                                      <p className="ttQuizPrompt">{q.prompt}</p>
+                                    </div>
                                   </div>
-                                )}
 
-                                {q.type === "yesno" && (
-                                  <div style={{ marginTop: 6, opacity: 0.9 }}>
-                                    Správně: <b>{q.correct_answer === "A" ? "ANO" : "NE"}</b>
-                                  </div>
-                                )}
+                                  {q.type === "final_open" && (
+                                    <div className="ttQuizOpenHint">
+                                      Otevřená otázka — žák píše vlastní odpověď (v náhledu není jedna „správná“ varianta).
+                                    </div>
+                                  )}
 
-                                {q.explanation && (
-                                  <div style={{ marginTop: 8, fontStyle: "italic", opacity: 0.9 }}>
-                                    {q.explanation}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                                  {(q.type === "mcq" || q.type === "yesno") && q.options && (
+                                    <div className="ttQuizOpts">
+                                      {optKeys.map((k) => {
+                                        const text = q.options?.[k];
+                                        if (text == null || text === "") return null;
+                                        const correct = String(q.correct_answer || "").toUpperCase() === k;
+                                        return (
+                                          <div
+                                            key={k}
+                                            className={`ttQuizOpt${correct ? " ttQuizOptCorrect" : ""}`}
+                                          >
+                                            <span className="ttQuizOptKey">{k}</span>
+                                            <span>{text}</span>
+                                            {correct ? (
+                                              <span style={{ marginLeft: "auto", fontSize: 12, fontWeight: 800 }}>
+                                                správně
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {q.explanation ? (
+                                    <div className="ttQuizExplain">
+                                      <strong style={{ fontStyle: "normal" }}>Vysvětlení:</strong> {q.explanation}
+                                    </div>
+                                  ) : null}
+                                </article>
+                              );
+                            })}
                           </div>
                         );
                       })()}
@@ -651,7 +702,7 @@ export default function TeacherTopicDetail() {
                   )
                 ) : (
                   <div style={{ ...paperBox, opacity: 0.9 }}>
-                    Zatím nemáš žádný kvíz. Klikni na <b>Vygenerovat kvíz</b>.
+                    Zatím nemáš žádný kvíz. Klikni na <b>Spustit generování</b>.
                   </div>
                 )}
 
@@ -693,36 +744,57 @@ export default function TeacherTopicDetail() {
             )}
           </div>
 
-          <TeacherTopicRightPanel
-            tab={tab}
-            onRun={onRun}
-            loading={loading}
-            fileInputRef={fileInputRef}
-            onFilesChange={onFilesChange}
-            files={files}
-            removeFileAt={removeFileAt}
-            clearFiles={clearFiles}
-            isPdfFile={isPdfFile}
-            isImageFile={isImageFile}
-            dbTeacherLabel={dbTeacherLabel}
-            dbStudentLabel={dbStudentLabel}
-            dbQuizLabel={dbQuizLabel}
-            onSaveFinalQuiz={onSaveFinalQuiz}
-            saveFinalFromActive={saveFinalFromActive}
-            quizSaveLoading={quizSaveLoading}
-            activeQuizVersionId={activeQuizVersionId}
-            saveFinalLoading={saveFinalLoading}
-            noNotesYet={noNotesYet}
-            regenTarget={regenTarget}
-            setRegenTarget={setRegenTarget}
-            userNote={userNote}
-            setUserNote={setUserNote}
-            onRegenerateQuiz={handleRegenerateQuiz}
-            onRegenerate={handleRegenerateNotes}
-            quizRegenLoading={quizRegenLoading}
-            regenLoading={regenLoading}
-          />
+          <div className="ttTopicDetailSidebar">
+            <TeacherTopicRightPanel
+              tab={tab}
+              onRun={onRun}
+              loading={loading}
+              fileInputRef={fileInputRef}
+              onFilesChange={onFilesChange}
+              files={files}
+              removeFileAt={removeFileAt}
+              clearFiles={clearFiles}
+              isPdfFile={isPdfFile}
+              isImageFile={isImageFile}
+              dbTeacherLabel={dbTeacherLabel}
+              dbStudentLabel={dbStudentLabel}
+              dbQuizLabel={dbQuizLabel}
+              onSaveFinalQuiz={onSaveFinalQuiz}
+              saveFinalFromActive={saveFinalFromActive}
+              quizSaveLoading={quizSaveLoading}
+              activeQuizVersionId={activeQuizVersionId}
+              saveFinalLoading={saveFinalLoading}
+              noNotesYet={noNotesYet}
+              regenTarget={regenTarget}
+              setRegenTarget={setRegenTarget}
+              userNote={userNote}
+              setUserNote={setUserNote}
+              onRegenerateQuiz={handleRegenerateQuiz}
+              onRegenerate={handleRegenerateNotes}
+              quizRegenLoading={quizRegenLoading}
+              regenLoading={regenLoading}
+            />
+          </div>
         </div>
+
+        <Modal
+          open={backConfirmOpen}
+          onClose={() => setBackConfirmOpen(false)}
+          title="Opustit kapitolu?"
+        >
+          <p className="tcdConfirmModalBody">
+            Jste si jisti, že máte vybranou trvale uloženou správnou verzi? Všechny ostatní budou
+            smazány.
+          </p>
+          <div className="gaModalActions">
+            <button type="button" className="tcdBtn" onClick={() => setBackConfirmOpen(false)}>
+              Zrušit
+            </button>
+            <button type="button" className="tcdBtn primary" onClick={confirmNavigateBackToClass}>
+              Zpět na třídu
+            </button>
+          </div>
+        </Modal>
       </div>
     </div>
   );

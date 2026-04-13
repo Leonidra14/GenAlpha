@@ -9,6 +9,8 @@ export default function StudentLogin() {
       navigateTo="/student"
       illustrationSrc={studentIllustration}
       illustrationClassName="tloginStudent"
+      loginPlaceholder="např. novak15 / e-mail"
+      loginAutoComplete="username"
     />
   );
 }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { apiFetch } from "../../api/client";
 import AppBackgroundDecor from "../layout/AppBackgroundDecor";
 import { useRandomDecorations } from "../../hooks/useRandomDecorations";
+import { backgroundDecorPresets } from "../../constants/backgroundDecorPresets";
 import "./AuthLoginPage.css";
 
 import logo from "../../assets/logo.png";
@@ -18,19 +19,17 @@ export default function AuthLoginPage({
   illustrationClassName = "tloginTeacher",
   showRegister = false,
   registerPath = "/teacher/register",
+  loginPlaceholder = "E-mail nebo přihlašovací jméno",
+  loginAutoComplete = "username",
 }) {
-  const [email, setEmail] = useState("");
+  const [login, setLogin] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const nav = useNavigate();
 
   const randomDecos = useRandomDecorations({
-    seed: 77,
-    starsMin: 50,
-    starsRange: 1,
-    flightsMin: 5,
-    flightsRange: 1,
+    ...backgroundDecorPresets.auth,
     starSrc: star,
     flightSrc: flight,
   });
@@ -42,14 +41,14 @@ export default function AuthLoginPage({
     try {
       const data = await apiFetch("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ login: login.trim(), password }),
       });
       localStorage.setItem("access_token", data.access_token);
       nav(navigateTo);
     } catch (err) {
       const msg = err?.message?.toLowerCase() || "";
-      if (msg.includes("invalid") || msg.includes("credential")) {
-        setError("Chybně zadaný email nebo heslo.");
+      if (msg.includes("invalid") || msg.includes("credential") || msg.includes("neplatné")) {
+        setError("Chybné přihlašovací jméno nebo heslo.");
       } else {
         setError(err?.message || "Přihlášení se nepovedlo.");
       }
@@ -85,11 +84,11 @@ export default function AuthLoginPage({
               <span className="tloginIcon" aria-hidden="true">✉️</span>
               <input
                 className="tloginInput"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                placeholder={loginPlaceholder}
+                value={login}
+                onChange={(e) => setLogin(e.target.value)}
                 disabled={loading}
-                autoComplete="email"
+                autoComplete={loginAutoComplete}
               />
             </label>
 

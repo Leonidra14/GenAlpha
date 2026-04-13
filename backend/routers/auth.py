@@ -33,8 +33,12 @@ def _unauthorized_with_cleared_cookie(detail: str) -> JSONResponse:
 
 @router.post("/login", response_model=TokenOut)
 def login(payload: LoginIn, response: Response, db: Session = Depends(get_db)):
-    email = payload.email.lower()
-    user = db.query(User).filter(User.email == email).first()
+    raw = (payload.login or "").strip()
+    key = raw.lower()
+    if "@" in key:
+        user = db.query(User).filter(User.email == key).first()
+    else:
+        user = db.query(User).filter(User.login_key == key).first()
 
     if not user or not verify_password(payload.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Neplatné údaje")

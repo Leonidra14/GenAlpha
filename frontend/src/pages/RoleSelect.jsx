@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "./RoleSelect.css";
 import AppBackgroundDecor from "../components/layout/AppBackgroundDecor";
 import { useRandomDecorations } from "../hooks/useRandomDecorations";
+import { backgroundDecorPresets } from "../constants/backgroundDecorPresets";
 
 import logo from "../assets/logo.png";
 import teacherImg from "../assets/teacher.png";
@@ -18,11 +19,7 @@ export default function RoleSelect() {
   const nav = useNavigate();
 
   const decos = useRandomDecorations({
-    seed: 42,
-    starsMin: 30,
-    starsRange: 1,
-    flightsMin: 10,
-    flightsRange: 1,
+    ...backgroundDecorPresets.roleSelect,
     starSrc: star,
     flightSrc: flight,
   });

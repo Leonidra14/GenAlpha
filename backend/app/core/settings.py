@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     openai_temp_context: float = 0.1
     openai_temp_autotag: float = 0.1
     openai_temp_quality: float = 0.7
+    openai_temp_tutor_guard: float = 0.15
+    openai_temp_tutor_socratic: float = 0.45
+    class_risk_cache_ttl_seconds: int = 86400
 
     model_config = SettingsConfigDict(
         env_file=".env",

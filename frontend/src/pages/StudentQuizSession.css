@@ -1,0 +1,766 @@
+/* Light card UI; :root uses a light foreground when the OS prefers dark mode, which clashes here. */
+.sqsPage {
+  color: #1a2244;
+}
+
+/* Dráha kvízu: segmenty + letadlo na pruhu směrem k cíli */
+.sqsPage .sqsProgress {
+  margin: 0 0 0.65rem;
+  width: 100%;
+  color: #141b33;
+}
+
+.sqsProgressTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 0.75rem;
+  margin-bottom: 0.28rem;
+}
+
+.sqsProgressCaption {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(26, 34, 68, 0.88);
+}
+
+.sqsProgressRemain {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(26, 34, 68, 0.72);
+}
+
+.sqsProgressTrack {
+  position: relative;
+  padding: 0.1rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid rgba(92, 106, 168, 0.28);
+  background: linear-gradient(165deg, #f0f2ff 0%, #e2e6fb 45%, #dce2f8 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 2px 10px rgba(42, 60, 140, 0.05);
+}
+
+.sqsProgressRunway {
+  display: flex;
+  align-items: center;
+  gap: 0.22rem;
+  min-height: 0;
+}
+
+.sqsProgressLane {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.sqsProgressSegments {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  gap: 1px;
+  min-height: 8px;
+  align-items: stretch;
+  width: 100%;
+  padding: 1px 3px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow:
+    inset 0 1px 2px rgba(30, 40, 90, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+}
+
+.sqsProgressSeg {
+  flex: 1 1 0;
+  min-width: 3px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: inset 0 1px 2px rgba(20, 27, 51, 0.07);
+  transition:
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.22s ease;
+}
+
+.sqsProgressSeg--done {
+  background: linear-gradient(145deg, #5a6fd4 0%, #3d4fa8 55%, #2a3a7a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 1px 3px rgba(42, 60, 140, 0.2);
+}
+
+.sqsProgressSeg--current {
+  background: linear-gradient(145deg, rgba(90, 111, 212, 0.35), rgba(255, 255, 255, 0.95));
+  box-shadow:
+    inset 0 0 0 1px #4a5fc9,
+    0 0 0 1px rgba(74, 95, 201, 0.18);
+}
+
+.sqsProgressPlaneWrap {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(42, 60, 140, 0.25));
+}
+
+.sqsProgressPlane {
+  display: block;
+  width: 76px;
+  height: auto;
+  max-height: 80px;
+  object-fit: contain;
+  transform: rotate(-8deg);
+}
+
+@media (max-width: 520px) {
+  .sqsProgressPlane {
+    width: 62px;
+    max-height: 66px;
+  }
+
+  .sqsProgressSegments {
+    min-height: 7px;
+    gap: 1px;
+    padding: 1px 2px;
+  }
+
+  .sqsProgressRunway {
+    gap: 0.18rem;
+  }
+
+  .sqsProgressTrack {
+    padding: 0.08rem 0.4rem;
+    border-radius: 6px;
+  }
+}
+
+.sqsQuestionBody {
+  margin-top: 0.75rem;
+}
+
+.sqsPrompt {
+  font-size: 1.05rem;
+  line-height: 1.45;
+  margin: 0 0 1rem;
+  color: #141b33;
+}
+
+.sqsOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0 0 1rem;
+}
+
+.sqsOption {
+  --sqs-tone: #5c6aa8;
+  --sqs-tint: rgba(92, 106, 168, 0.12);
+  --sqs-edge: rgba(92, 106, 168, 0.38);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--sqs-edge);
+  background: linear-gradient(
+    135deg,
+    var(--sqs-tint),
+    rgba(255, 255, 255, 0.72)
+  );
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.65) inset;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.sqsOption:has(input:checked) {
+  border-color: var(--sqs-tone);
+  border-width: 2px;
+  padding: calc(0.65rem - 1px) calc(0.75rem - 1px);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.65) inset,
+    0 4px 18px color-mix(in srgb, var(--sqs-tone) 28%, transparent);
+}
+
+/* Blooket-like: red / blue / yellow / green */
+.sqsOption--a,
+.sqsOption--slot0 {
+  --sqs-tone: #e24a3c;
+  --sqs-tint: rgba(226, 74, 60, 0.2);
+  --sqs-edge: rgba(226, 74, 60, 0.42);
+}
+
+.sqsOption--b,
+.sqsOption--slot1 {
+  --sqs-tone: #2a7deb;
+  --sqs-tint: rgba(42, 125, 235, 0.16);
+  --sqs-edge: rgba(42, 125, 235, 0.4);
+}
+
+.sqsOption--c,
+.sqsOption--slot2 {
+  --sqs-tone: #e6a317;
+  --sqs-tint: rgba(230, 163, 23, 0.22);
+  --sqs-edge: rgba(230, 163, 23, 0.45);
+}
+
+.sqsOption--d,
+.sqsOption--slot3 {
+  --sqs-tone: #1faa6a;
+  --sqs-tint: rgba(31, 170, 106, 0.16);
+  --sqs-edge: rgba(31, 170, 106, 0.4);
+}
+
+/* Nativní kolečko schovat — výběr je vidět na celé kartě + badge */
+.sqsOption input[type="radio"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sqsOption input[type="radio"]:focus-visible + .sqsOptionBody {
+  outline: 2px solid var(--sqs-tone);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+.sqsOptionBody {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.sqsOptionMark {
+  flex-shrink: 0;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.35rem;
+  border-radius: 10px;
+  background: var(--sqs-tone);
+  color: #fff;
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Yellow badge: dark text for contrast */
+.sqsOption--c .sqsOptionMark,
+.sqsOption--slot2 .sqsOptionMark {
+  color: #2f2608;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.sqsOptionText {
+  color: #141b33;
+  line-height: 1.45;
+  padding-top: 0.2rem;
+}
+
+.sqsOpenInput {
+  width: 100%;
+  min-height: 140px;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1px solid rgba(30, 40, 60, 0.15);
+  font: inherit;
+  resize: vertical;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+  color: #141b33;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.sqsOpenInput::placeholder {
+  color: rgba(20, 27, 51, 0.45);
+}
+
+.sqsFeedback {
+  margin-top: 1.25rem;
+  padding: 1rem 1.1rem;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 40, 60, 0.12);
+}
+
+.sqsFeedback.ok {
+  border-color: rgba(34, 139, 34, 0.35);
+  background: rgba(34, 139, 34, 0.08);
+}
+
+.sqsFeedback.bad {
+  border-color: rgba(200, 60, 60, 0.35);
+  background: rgba(200, 60, 60, 0.07);
+}
+
+.sqsFeedbackTitle {
+  font-weight: 650;
+  margin: 0 0 0.5rem;
+  color: #141b33;
+}
+
+.sqsFeedbackBody {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+  color: #1a2244;
+}
+
+.sqsSummaryScores {
+  font-size: 1.15rem;
+  font-weight: 650;
+  margin: 0.5rem 0 0.75rem;
+  color: #141b33;
+}
+
+.sqsIntroHint {
+  margin: 0 0 0.25rem;
+  line-height: 1.5;
+  color: #2a3358;
+}
+
+.sqsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+/* Bonus: čekání na vygenerování kvízu */
+.sqsBonusStarting {
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 1.35rem 1.5rem 1.5rem;
+}
+
+.sqsBonusStartingInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1rem;
+}
+
+.sqsBonusStartingMascot {
+  width: min(220px, 72vw);
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+  transform-origin: 50% 50%;
+  animation: sqsBonusMascotSway 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sqsBonusStartingMascot {
+    animation: none;
+  }
+}
+
+@keyframes sqsBonusMascotSway {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-2.5deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(2.5deg);
+  }
+}
+
+.sqsBonusStartingText {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: #1a2244;
+}
+
+/* Tutor (SSE) — plovoucí tlačítko + popup */
+.sqsTutorFab {
+  position: fixed;
+  /* Nad backdropem (1001) a panelem (1002), aby robot nebyl ztmavený překryvem */
+  z-index: 1003;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: linear-gradient(145deg, #6b7ce8 0%, #4a5fc9 55%, #3d4fa8 100%);
+  box-shadow:
+    0 4px 18px rgba(42, 60, 140, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.sqsTutorFab:hover {
+  transform: scale(1.05);
+  box-shadow:
+    0 6px 24px rgba(42, 60, 140, 0.4),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset;
+}
+
+.sqsTutorFab:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 3px;
+}
+
+.sqsTutorFab--open {
+  transform: scale(1.05);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.92),
+    0 6px 24px rgba(42, 60, 140, 0.42),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset;
+}
+
+.sqsTutorFab--open:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.95),
+    0 8px 28px rgba(42, 60, 140, 0.48),
+    0 1px 0 rgba(255, 255, 255, 0.35) inset;
+}
+
+.sqsTutorFabImg {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.sqsTutorPopupBackdrop {
+  position: fixed;
+  z-index: 1001;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(20, 27, 51, 0.35);
+  cursor: pointer;
+  animation: sqsTutorFadeIn 0.2s ease;
+}
+
+.sqsTutorPopup {
+  position: fixed;
+  z-index: 1002;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + 64px + 12px);
+  width: min(100vw - 2rem, 400px);
+  max-height: min(72vh, 560px);
+  display: flex;
+  flex-direction: column;
+  animation: sqsTutorPopIn 0.22s ease;
+}
+
+.sqsTutorPopupChrome {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: min(72vh, 560px);
+  border-radius: 16px;
+  border: 1px solid rgba(92, 106, 168, 0.35);
+  background: linear-gradient(165deg, #f6f7ff 0%, #e8ecfb 52%, #dfe5f8 100%);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 16px 48px rgba(42, 60, 140, 0.22);
+  overflow: hidden;
+}
+
+.sqsTutorPopupTopBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.55rem 0.65rem 0.5rem 0.85rem;
+  border-bottom: 1px solid rgba(92, 106, 168, 0.18);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.sqsTutorPopupTitle {
+  margin: 0;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.sqsTutorPopupClose {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.75);
+  color: #2a3a7a;
+  font-size: 1.45rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.sqsTutorPopupClose:hover {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.sqsTutorPopupClose:focus-visible {
+  outline: 2px solid #4a5fc9;
+  outline-offset: 2px;
+}
+
+.sqsTutorBubble .sqsTutorBubbleText {
+  margin: 0;
+}
+
+.sqsTutorBubble .sqsTutorBubbleText + .sqsTutorBubbleText {
+  margin-top: 0.25rem;
+}
+
+.sqsTutorPanel {
+  padding: 0.75rem 0.85rem 1rem;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sqsTutorPanel--popup {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 0.55rem;
+}
+
+.sqsTutorPanel--popup .sqsTutorThread {
+  flex: 1 1 auto;
+  min-height: 120px;
+  max-height: none;
+  margin-bottom: 0.5rem;
+}
+
+.sqsTutorPanel--popup .sqsTutorComposer {
+  flex-shrink: 0;
+}
+
+@keyframes sqsTutorFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes sqsTutorPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .sqsTutorPopup {
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    width: auto;
+    max-height: min(78vh, 620px);
+    bottom: calc(max(0.75rem, env(safe-area-inset-bottom, 0px)) + 64px + 10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sqsTutorPopupBackdrop,
+  .sqsTutorPopup {
+    animation: none;
+  }
+}
+
+.sqsTutorHint {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: rgba(26, 34, 68, 0.78);
+}
+
+.sqsTutorPhase {
+  margin: 0 0 0.55rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #4a5fc9;
+}
+
+.sqsTutorThread {
+  max-height: min(42vh, 320px);
+  overflow-y: auto;
+  padding: 0.35rem 0.15rem 0.5rem;
+  margin-bottom: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  scrollbar-gutter: stable;
+}
+
+.sqsTutorRow {
+  display: flex;
+  width: 100%;
+}
+
+.sqsTutorRow--user {
+  justify-content: flex-end;
+}
+
+.sqsTutorRow--assistant {
+  justify-content: flex-start;
+}
+
+.sqsTutorPanel--popup .sqsTutorBubble {
+  max-width: 100%;
+}
+
+.sqsTutorBubble {
+  max-width: min(100%, 26rem);
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(30, 40, 60, 0.1);
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+
+.sqsTutorRow--user .sqsTutorBubble {
+  background: linear-gradient(145deg, #5a6fd4 0%, #3d4fa8 100%);
+  color: #fff;
+  border-color: rgba(42, 58, 122, 0.35);
+  box-shadow: 0 2px 8px rgba(42, 60, 140, 0.2);
+}
+
+.sqsTutorRow--assistant .sqsTutorBubble {
+  background: rgba(255, 255, 255, 0.92);
+  color: #141b33;
+}
+
+.sqsTutorBubbleText {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sqsTutorTyping {
+  display: inline-block;
+  min-width: 1.25rem;
+  color: rgba(26, 34, 68, 0.45);
+  font-weight: 700;
+  animation: sqsTutorPulse 1s ease-in-out infinite;
+}
+
+@keyframes sqsTutorPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.sqsTutorComposer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.sqsTutorInput {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3.25rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 10px;
+  border: 1px solid rgba(30, 40, 60, 0.15);
+  font: inherit;
+  font-size: 0.92rem;
+  resize: vertical;
+  color: #141b33;
+  background: rgba(255, 255, 255, 0.95);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.sqsTutorInput::placeholder {
+  color: rgba(20, 27, 51, 0.45);
+}
+
+.sqsTutorInput:disabled {
+  opacity: 0.65;
+}
+
+.sqsTutorComposerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.sqsTutorCounter {
+  font-size: 0.75rem;
+  color: rgba(26, 34, 68, 0.5);
+  margin-right: auto;
+}
+
+.sqsTutorSend {
+  min-width: 6.5rem;
+}
+
+@media (max-width: 520px) {
+  .sqsTutorThread {
+    max-height: min(38vh, 260px);
+  }
+
+  .sqsTutorBubble {
+    max-width: 92%;
+  }
+}

@@ -1,17 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TeacherClassCard from "../components/TeacherClassCard";
-import CreateClassModal from "../components/CreateClassModal";
-import AppTopbar from "../components/layout/AppTopbar";
-import AppBackgroundDecor from "../components/layout/AppBackgroundDecor";
+import ClassFormModal from "../components/ClassFormModal";
+import ClassListPageLayout from "../components/layout/ClassListPageLayout";
 import { getTeacherClasses, updateClass } from "../api/api";
-import "./TeacherMainPage.css";
+import "./MainPage.css";
 
-import clouds from "../assets/clouds.png";
-import labs from "../assets/lab_books.png";
-import star from "../assets/star.png";
-import flight from "../assets/flight.png";
-import { useRandomDecorations } from "../hooks/useRandomDecorations";
 import { useLogout } from "../hooks/useLogout";
 
 const TeacherMainPage = () => {
@@ -22,16 +16,6 @@ const TeacherMainPage = () => {
   const nav = useNavigate();
 
   const handleLogout = useLogout();
-
-  const randomDecos = useRandomDecorations({
-    seed: 99,
-    starsMin: 50,
-    starsRange: 1,
-    flightsMin: 10,
-    flightsRange: 1,
-    starSrc: star,
-    flightSrc: flight,
-  });
 
   async function load() {
     setError("");
@@ -66,33 +50,7 @@ const TeacherMainPage = () => {
   const inactiveClasses = classes.filter((c) => !c.active);
 
   return (
-    <div className="tmainPage">
-      <AppBackgroundDecor
-        cloudsSrc={clouds}
-        labsSrc={labs}
-        randomDecos={randomDecos}
-        cloudsClassName="tmainDec tmainClouds"
-        labsClassName="tmainDec tmainLabs"
-        randomBaseClassName="tmainDec tmainRand"
-        randomFlightClassName="tmainRandFlight"
-        randomStarClassName="tmainRandStar"
-      />
-
-      <div className="tmainWrap">
-        <AppTopbar
-          onLogout={handleLogout}
-          topbarClassName="tmainTopbar"
-          logoClassName="tmainLogo"
-          actionsClassName="tmainTopActions"
-          logoutButtonClassName="tmainLogout tcdBtn"
-        />
-
-        <div className="tmainHeader">
-          <h1 className="tmainPageTitle">Tvé třídy</h1>
-        </div>
-
-        {error && <div className="tmainError">{error}</div>}
-
+    <ClassListPageLayout onLogout={handleLogout} title="Tvé třídy" error={error}>
         <h2 className="tmainSectionTitle">Aktivní</h2>
         <div className="tmainGrid">
           {activeClasses.map((c) => (
@@ -127,13 +85,12 @@ const TeacherMainPage = () => {
           ))}
         </div>
 
-        <CreateClassModal
+        <ClassFormModal
           open={createOpen}
           onClose={() => setCreateOpen(false)}
-          onCreated={() => load()}
+          onSuccess={() => load()}
         />
-      </div>
-    </div>
+    </ClassListPageLayout>
   );
 };
 

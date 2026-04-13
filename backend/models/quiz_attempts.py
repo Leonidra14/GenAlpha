@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Float, ForeignKey, Identity, Integer, JSON
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Identity, Integer, JSON, String, Text, text
 
 from database.database import Base
 
@@ -26,3 +26,6 @@ class QuizAttempt(Base):
 
     answers_json = Column(JSON, nullable=False)
     mistakes_json = Column(JSON, nullable=False)
+
+    attempt_kind = Column(String(32), nullable=False, server_default=text("'main'"), default="main")
+    quiz_snapshot_json = Column(Text, nullable=True)

@@ -6,16 +6,20 @@
   gap: 12px;
 }
 
-.ttActionInfo {
-  margin-top: 10px;
-  line-height: 1.35;
+/* Stejný vertikální rytmus jako u karet „Trvale uložené verze“ / „Finální verze“ */
+.ttRightPanelCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .ttUploadDropZone {
   border: 2px dashed rgba(120, 120, 255, 0.35);
   border-radius: 18px;
-  padding: 14px;
+  /* Bez bočního paddingu — zarovnání s textem v .ttDbCardBody (jen vnitřek .tcdCard) */
+  padding: 10px 0 12px;
   background: rgba(255, 255, 255, 0.55);
+  box-sizing: border-box;
 }
 
 .ttUploadIconBox {
@@ -25,7 +29,7 @@
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid rgba(0, 0, 0, 0.06);
-  margin-bottom: 12px;
+  margin: 0;
 }
 
 .ttUploadIcon {
@@ -35,14 +39,14 @@
 .ttUploadHint {
   opacity: 0.7;
   font-size: 13px;
-  margin-top: 8px;
+  margin-top: 0;
   color: #1f2330;
 }
 
 .ttFilesList {
   display: grid;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 0;
 }
 
 .ttFileItem {
@@ -66,7 +70,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 230px;
+  max-width: min(230px, 100%);
 }
 
 .ttFileSize {
@@ -90,7 +94,7 @@
 }
 
 .ttFinalHint {
-  margin-bottom: 10px;
+  margin-bottom: 0;
 }
 
 .ttRegenTextArea {
@@ -99,10 +103,6 @@
   color: #1f2330;
 }
 
-.ttRegenTextAreaWithTopGap {
-  margin-top: 10px;
-}
-
 .ttRegenBtn {
-  margin-top: 10px;
+  margin-top: 0;
 }

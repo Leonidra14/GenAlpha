@@ -1,0 +1,385 @@
+/* Shared modal shell + form blocks (used by Modal.jsx and modal content components) */
+
+.gaModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 24, 60, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  /* :root má často color-scheme: light dark → bez toho bývají posuvníky v modalu tmavé */
+  color-scheme: light;
+}
+
+.gaModal {
+  width: min(640px, 92vw);
+  max-height: 80vh;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(90, 120, 255, 0.18);
+  border-radius: 22px;
+  padding: 18px;
+  color: rgba(35, 36, 58, 0.92);
+  box-shadow:
+    0 18px 40px rgba(26, 52, 160, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color-scheme: light;
+}
+
+.gaModal:focus {
+  outline: none;
+}
+
+.gaModal:focus-visible {
+  box-shadow:
+    0 18px 40px rgba(26, 52, 160, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    0 0 0 3px rgba(90, 120, 255, 0.35);
+}
+
+.gaModalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.gaModalTitle {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.gaModalCloseIcon {
+  font-size: 18px;
+  font-weight: 900;
+  transform: translateY(-0.5px);
+  line-height: 1;
+}
+
+/* Main scroll area inside Modal (replaces inline overflow on .gaScroll) */
+.gaScroll {
+  overflow-y: auto;
+  padding-right: 6px;
+  min-height: 0;
+  color-scheme: light;
+}
+
+/* ----- Sections (glass cards inside modal content) ----- */
+
+.gaModalSection {
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(90, 120, 255, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 14px 28px rgba(26, 52, 160, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(10px);
+  margin-bottom: 12px;
+  color: rgba(35, 36, 58, 0.92);
+}
+
+.gaModalSectionTitle {
+  margin: 0 0 10px;
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(35, 36, 58, 0.85);
+}
+
+.gaModalMuted {
+  color: rgba(35, 36, 58, 0.55);
+  font-size: 12px;
+}
+
+.gaModalLabel {
+  display: block;
+  font-size: 12px;
+  color: rgba(35, 36, 58, 0.65);
+  margin-bottom: 6px;
+  font-weight: 800;
+}
+
+.gaModalInput {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 130, 180, 0.22);
+  background: rgba(255, 255, 255, 0.78);
+  color: rgba(35, 36, 58, 0.92);
+  outline: none;
+  box-sizing: border-box;
+  box-shadow: 0 10px 18px rgba(60, 80, 190, 0.08);
+  color-scheme: light;
+}
+
+.gaModalInput[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.gaModalInput[type="number"]::-webkit-outer-spin-button,
+.gaModalInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Orámované pole s inputem (ClassFormModal) */
+.gaModalIconField {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(120, 130, 180, 0.22);
+  box-shadow: 0 10px 18px rgba(60, 80, 190, 0.08);
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.gaModalIconField > .gaModalInputPlain {
+  flex: 1;
+  min-width: 0;
+}
+
+.gaModalInputPlain {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: rgba(35, 36, 58, 0.9);
+  min-width: 10px;
+  color-scheme: light;
+}
+
+.gaModalInputPlain::placeholder {
+  color: rgba(35, 36, 58, 0.45);
+}
+
+.gaModalInputPlain:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.gaModalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.gaModalRow2Wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 720px) {
+  .gaModalRow2Wide {
+    grid-template-columns: 1fr;
+  }
+}
+
+.gaModalCheckLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 4px;
+  color: rgba(35, 36, 58, 0.75);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.gaModalCheckSm {
+  width: 16px;
+  height: 16px;
+}
+
+.gaModalRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.gaModalFieldGap {
+  margin-top: 10px;
+}
+
+.gaModalSearchRow {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.gaModalSearchRow .gaModalInput {
+  flex: 1;
+  min-width: 160px;
+}
+
+.gaModalCheckRow {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 130, 180, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.gaModalCheckText {
+  color: rgba(35, 36, 58, 0.78);
+  font-weight: 800;
+}
+
+.gaModalCheckbox {
+  width: 18px;
+  height: 18px;
+}
+
+.gaModalError {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  background: rgba(255, 230, 230, 0.75);
+  color: rgba(150, 20, 20, 0.95);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.gaModalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.gaModalActionsSpaced {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+/* Nested scroll inside modal body (e.g. long tables) */
+.gaModalScrollBox {
+  margin-top: 10px;
+  max-height: 170px;
+  overflow-y: auto;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 130, 180, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* Tables */
+.gaModalTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.gaModalTable thead tr {
+  border-bottom: 1px solid rgba(120, 130, 180, 0.18);
+}
+
+.gaModalTh {
+  text-align: left;
+  padding: 10px 6px;
+  font-size: 12px;
+  color: rgba(35, 36, 58, 0.55);
+  font-weight: 900;
+}
+
+.gaModalThRight {
+  text-align: right;
+}
+
+.gaModalTr {
+  border-top: 1px solid rgba(120, 130, 180, 0.12);
+}
+
+.gaModalTd {
+  padding: 10px 6px;
+  vertical-align: middle;
+  font-size: 14px;
+  color: rgba(35, 36, 58, 0.78);
+}
+
+.gaModalTdMono {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+}
+
+.gaModalTdRight {
+  text-align: right;
+}
+
+.gaModalTableActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.gaModalPwBlock {
+  margin-top: 10px;
+}
+
+.gaModalPwActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.gaModalStack {
+  display: grid;
+  gap: 12px;
+}
+
+.gaModalStack label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(35, 36, 58, 0.72);
+}
+
+.gaModalStack select {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(120, 130, 180, 0.22);
+  background: rgba(255, 255, 255, 0.9);
+  color: rgba(35, 36, 58, 0.92);
+  box-sizing: border-box;
+  box-shadow: 0 10px 18px rgba(60, 80, 190, 0.08);
+}
+
+.gaModalHint {
+  margin-top: 10px;
+  color: rgba(35, 36, 58, 0.55);
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .gaModalRow2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Posuvníky modalu: globálně v styles/scrollbars.css (.gaModal, .gaScroll) */

@@ -17,6 +17,7 @@ import labs from "../assets/lab_books.png";
 import star from "../assets/star.png";
 import flight from "../assets/flight.png";
 import { useRandomDecorations } from "../hooks/useRandomDecorations";
+import { backgroundDecorPresets } from "../constants/backgroundDecorPresets";
 
 export default function StudentClassDetail() {
   const { classId } = useParams();
@@ -25,6 +26,7 @@ export default function StudentClassDetail() {
   const [cls, setCls] = useState(null);
   const [topics, setTopics] = useState([]);
   const [error, setError] = useState("");
+  const [progressError, setProgressError] = useState("");
   const [loading, setLoading] = useState(true);
 
   const logout = useLogout();
@@ -49,6 +51,7 @@ export default function StudentClassDetail() {
   }, [classId]);
 
   async function markDone(topic, doneValue) {
+    setProgressError("");
     setTopics((prev) =>
       prev.map((x) => (x.id === topic.id ? { ...x, done: doneValue } : x))
     );
@@ -56,19 +59,22 @@ export default function StudentClassDetail() {
     try {
       await setStudentTopicDone(topic.id, doneValue);
     } catch (e) {
-      // revert
       setTopics((prev) =>
         prev.map((x) => (x.id === topic.id ? { ...x, done: !doneValue } : x))
       );
-      alert(e?.message || "Nepodařilo se uložit stav.");
+      setProgressError(e?.message || "Nepodařilo se uložit stav.");
     }
   }
 
   const randomDecos = useRandomDecorations({
-    seed: 123,
+    ...backgroundDecorPresets.classTopicDetail,
     starSrc: star,
     flightSrc: flight,
   });
+
+  function openTopic(topicId) {
+    nav(`/student/classes/${classId}/topics/${topicId}`);
+  }
 
   if (loading) {
     return (
@@ -107,7 +113,6 @@ export default function StudentClassDetail() {
   const teacherName =
     [cls.teacher_first_name, cls.teacher_last_name].filter(Boolean).join(" ") || "—";
 
-  // ✅ rozdělení jako "Aktivní/Neaktivní" u učitele, ale podle progress
   const notDoneTopics = topics.filter((t) => !t.done);
   const doneTopics = topics.filter((t) => t.done);
 
@@ -143,6 +148,8 @@ export default function StudentClassDetail() {
         <div className="tcdHeader">
           <h1 className="tcdTitle">{title}</h1>
 
+          {progressError && <div className="tcdError">{progressError}</div>}
+
           {cls.note && cls.note.trim() && <div className="tcdSubtitle">{cls.note}</div>}
 
           <div className="tcdMeta">
@@ -167,7 +174,7 @@ export default function StudentClassDetail() {
             )}
 
             {notDoneTopics.map((t) => (
-              <div key={t.id} className="tcdTopic">
+              <div key={t.id} className="tcdTopic" onClick={() => openTopic(t.id)}>
                 <div className="tcdTopicLeft">
                   <div className="tcdBulb" aria-hidden="true">
                     💡
@@ -175,7 +182,7 @@ export default function StudentClassDetail() {
                   <div className="tcdTopicTitle">{t.title}</div>
                 </div>
 
-                <div className="tcdTopicActions">
+                <div className="tcdTopicActions" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     className="tcdBtn pill"
@@ -197,7 +204,7 @@ export default function StudentClassDetail() {
             )}
 
             {doneTopics.map((t) => (
-              <div key={t.id} className="tcdTopic tcdTopicInactive">
+              <div key={t.id} className="tcdTopic tcdTopicInactive" onClick={() => openTopic(t.id)}>
                 <div className="tcdTopicLeft">
                   <div className="tcdBulb" aria-hidden="true">
                     💡
@@ -205,7 +212,7 @@ export default function StudentClassDetail() {
                   <div className="tcdTopicTitle">{t.title}</div>
                 </div>
 
-                <div className="tcdTopicActions">
+                <div className="tcdTopicActions" onClick={(e) => e.stopPropagation()}>
                   <button
                     type="button"
                     className="tcdBtn pillDanger"

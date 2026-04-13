@@ -41,11 +41,13 @@ export default function TeacherTopicRightPanel(props) {
             <div className="tcdCardTitle ttCardTitleSmall">
               Akce
             </div>
-            <button className="tcdBtn primary ttFullWidth" onClick={onRun} disabled={loading}>
-              {loading ? "Generuji..." : "-> Spustit workflow"}
-            </button>
-            <div className="ttMuted13 ttActionInfo">
-              Po prvním úspěšném výstupu se učitelské i studentské poznámky automaticky trvale uloží do DB.
+            <div className="ttRightPanelCardBody">
+              <button className="tcdBtn primary ttFullWidth" onClick={onRun} disabled={loading}>
+                {loading ? "Generuji..." : "Spustit generování"}
+              </button>
+              <div className="ttDbCardBody">
+                Po prvním úspěšném výstupu se učitelské i studentské poznámky automaticky trvale uloží do DB.
+              </div>
             </div>
           </div>
 
@@ -53,7 +55,7 @@ export default function TeacherTopicRightPanel(props) {
             <div className="tcdCardTitle ttCardTitleSmall">
               Prilohy (max 3) - PDF / obrazky
             </div>
-            <div className="ttUploadDropZone">
+            <div className="ttUploadDropZone ttRightPanelCardBody">
               <div className="ttUploadIconBox" aria-hidden="true">
                 <div className="ttUploadIcon">🗂️</div>
               </div>
@@ -108,21 +110,22 @@ export default function TeacherTopicRightPanel(props) {
             <div className="tcdCardTitle ttCardTitleSmall">
               Trvale uložené verze
             </div>
-            <div className="ttDbCardBody">
-              {tab === "teacher" || tab === "student" ? (
-                <>
+            <div className="ttRightPanelCardBody">
+              <div className="ttDbCardBody">
+                {tab === "teacher" ? (
                   <div>
                     <b>Osnova pro učitele:</b> {dbTeacherLabel}
                   </div>
-                  <div className="ttDbSecondRow">
+                ) : tab === "student" ? (
+                  <div>
                     <b>Student:</b> {dbStudentLabel}
                   </div>
-                </>
-              ) : (
-                <div>
-                  <b>Quiz:</b> {dbQuizLabel}
-                </div>
-              )}
+                ) : (
+                  <div>
+                    <b>Quiz:</b> {dbQuizLabel}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
@@ -130,52 +133,61 @@ export default function TeacherTopicRightPanel(props) {
             <div className="tcdCardTitle ttCardTitleSmall">
               Finální verze
             </div>
-            <div className="ttMuted13 ttFinalHint">
-              Trvale ulož aktuálně vybranou verzi (a její úpravy).
+            <div className="ttRightPanelCardBody">
+              <div className="ttMuted13 ttFinalHint">
+                Trvale ulož aktuálně vybranou verzi (a její úpravy).
+              </div>
+              <button
+                className="tcdBtn primary ttFullWidth"
+                onClick={() => {
+                  if (tab === "quiz") onSaveFinalQuiz();
+                  else saveFinalFromActive(tab === "teacher" ? "teacher" : "student");
+                }}
+                disabled={tab === "quiz" ? quizSaveLoading || !activeQuizVersionId : saveFinalLoading || noNotesYet}
+              >
+                {tab === "quiz"
+                  ? quizSaveLoading
+                    ? "Ukladam..."
+                    : "Trvale uložit"
+                  : saveFinalLoading
+                    ? "Ukladam..."
+                    : "Trvale uložit"}
+              </button>
             </div>
-            <button
-              className="tcdBtn primary ttFullWidth"
-              onClick={() => {
-                if (tab === "quiz") onSaveFinalQuiz();
-                else saveFinalFromActive(tab === "teacher" ? "teacher" : "student");
-              }}
-              disabled={tab === "quiz" ? quizSaveLoading || !activeQuizVersionId : saveFinalLoading || noNotesYet}
-            >
-              {tab === "quiz"
-                ? quizSaveLoading
-                  ? "Ukladam..."
-                  : "Trvale uložit"
-                : saveFinalLoading
-                  ? "Ukladam..."
-                  : "Trvale uložit"}
-            </button>
           </div>
 
           <div className="tcdCard">
             <div className="tcdCardTitle ttCardTitleSmall">
               Upravit výstup
             </div>
-            {tab !== "quiz" && (
-              <select className="tcdInput" value={regenTarget} onChange={(e) => setRegenTarget(e.target.value)} disabled={noNotesYet}>
-                <option value="teacher">Osnova pro učitele</option>
-                <option value="student">Studentské poznámky</option>
-                <option value="both">Obojí</option>
-              </select>
-            )}
-            <textarea
-              className={`tcdInput ttRegenTextArea ${tab === "quiz" ? "" : "ttRegenTextAreaWithTopGap"}`}
-              value={userNote}
-              onChange={(e) => setUserNote(e.target.value)}
-              disabled={tab === "quiz" ? !activeQuizVersionId : noNotesYet}
-              maxLength={2000}
-            />
-            <button
-              className="tcdBtn ttFullWidth ttRegenBtn"
-              onClick={tab === "quiz" ? onRegenerateQuiz : onRegenerate}
-              disabled={tab === "quiz" ? quizRegenLoading || !userNote.trim() || !activeQuizVersionId : regenLoading || !userNote.trim() || noNotesYet}
-            >
-              {tab === "quiz" ? (quizRegenLoading ? "Upravuji kvíz..." : "Upravit kvíz") : regenLoading ? "Regeneruji..." : "Upravit"}
-            </button>
+            <div className="ttRightPanelCardBody">
+              {tab !== "quiz" && (
+                <select className="tcdInput" value={regenTarget} onChange={(e) => setRegenTarget(e.target.value)} disabled={noNotesYet}>
+                  <option value="teacher">Osnova pro učitele</option>
+                  <option value="student">Studentské poznámky</option>
+                  <option value="both">Obojí</option>
+                </select>
+              )}
+              <textarea
+                className="tcdInput ttRegenTextArea"
+                value={userNote}
+                onChange={(e) => setUserNote(e.target.value)}
+                disabled={tab === "quiz" ? !activeQuizVersionId : noNotesYet}
+                placeholder={
+                  tab === "quiz"
+                    ? "Např.: zjednoduš otázky, přidej lehčí varianty pro slabší žáky..."
+                    : "Např.: zjednoduš to, přidej příklady, zkrať text na hlavní body..."
+                }
+                maxLength={2000}
+              />
+              <button
+                className="tcdBtn ttFullWidth ttRegenBtn"
+                onClick={tab === "quiz" ? onRegenerateQuiz : onRegenerate}
+                disabled={tab === "quiz" ? quizRegenLoading || !userNote.trim() || !activeQuizVersionId : regenLoading || !userNote.trim() || noNotesYet}
+              >
+                {tab === "quiz" ? (quizRegenLoading ? "Upravuji kvíz..." : "Upravit kvíz") : regenLoading ? "Regeneruji..." : "Upravit"}
+              </button>
+            </div>
           </div>
         </>
       )}

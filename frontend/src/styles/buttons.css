@@ -49,3 +49,29 @@
   background: linear-gradient(90deg, #ff7aa8, #ff6a8a);
   box-shadow: 0 14px 22px rgba(255, 106, 138, 0.18);
 }
+
+/* Dense buttons (modal tables, toolbars) */
+.tcdBtn.compact {
+  height: auto;
+  min-height: 30px;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* Square icon close in modal header */
+.tcdBtn.gaModalCloseBtn {
+  width: 38px;
+  height: 38px;
+  min-height: 38px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tcdBtn:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+  box-shadow: none;
+}

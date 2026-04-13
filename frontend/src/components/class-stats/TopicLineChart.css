@@ -1,0 +1,81 @@
+.tcsLineChart {
+  margin: 14px 0 20px;
+}
+
+.tcsLineChartTitle {
+  font-weight: 900;
+  font-size: 15px;
+  color: #111;
+  margin-bottom: 8px;
+  letter-spacing: -0.01em;
+}
+
+.tcsLineChartSvg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+}
+
+.tcsLineChartTopicLegend {
+  margin: 10px 0 0;
+  padding: 10px 12px 10px 1.35rem;
+  border-radius: 12px;
+  background: rgba(223, 243, 250, 0.65);
+  border: 1px solid rgba(0, 100, 140, 0.12);
+  font-size: 12px;
+  line-height: 1.45;
+  color: rgba(20, 30, 40, 0.88);
+  list-style-position: outside;
+}
+
+.tcsLineChartTopicLegendItem {
+  margin-bottom: 6px;
+  padding-left: 0.35rem;
+  word-break: break-word;
+}
+
+.tcsLineChartTopicLegendItem::marker {
+  color: #2ea35c;
+  font-weight: 800;
+}
+
+.tcsLineChartTopicLegendItem:last-child {
+  margin-bottom: 0;
+}
+
+.tcsLineChartBg {
+  fill: #e8f6fc;
+}
+
+.tcsLineChartPlot {
+  fill: #dff3fa;
+}
+
+.tcsLineChartGrid {
+  stroke: rgba(0, 100, 140, 0.14);
+  stroke-width: 1;
+}
+
+.tcsLineChartLine {
+  stroke: #2ea35c;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tcsLineChartDot {
+  fill: #2ea35c;
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+
+.tcsLineChartAxisLabel {
+  font-size: 11px;
+  fill: rgba(20, 30, 40, 0.68);
+}
+
+.tcsLineChartXIndex {
+  font-size: 11px;
+  font-weight: 800;
+  fill: #2ea35c;
+}

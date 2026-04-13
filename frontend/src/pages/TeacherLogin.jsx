@@ -11,6 +11,8 @@ export default function TeacherLogin() {
       illustrationClassName="tloginTeacher"
       showRegister
       registerPath="/teacher/register"
+      loginPlaceholder="E-mail"
+      loginAutoComplete="email"
     />
   );
 }

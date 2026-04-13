@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.auth import router as auth_router
 
-from database.database import engine, Base
+from database.database import engine, Base, ensure_quiz_attempts_bonus_columns, ensure_users_login_key_and_email_nullable
 from routers import classes as classes_router
 from routers.topics import router as topics_router
 from routers.enrollments import router as enrollments_router
@@ -22,6 +22,8 @@ from models.quiz_attempts import QuizAttempt
 
 # vytvoření tabulek
 Base.metadata.create_all(bind=engine)
+ensure_quiz_attempts_bonus_columns()
+ensure_users_login_key_and_email_nullable()
 
 app = FastAPI()
 

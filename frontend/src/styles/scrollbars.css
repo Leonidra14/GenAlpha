@@ -1,0 +1,103 @@
+html,
+body,
+#root,
+textarea,
+select,
+.tcdInput,
+.gaModalInput,
+.gaModalInputPlain,
+.sqsOpenInput,
+pre,
+.mdBody,
+.gaScroll,
+.gaModal,
+.sqsTutorThread,
+.sqsTutorInput {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(191, 191, 191, 0.98) rgb(255, 255, 255);
+}
+
+/* ----- WebKit (Chrome, Edge, Safari) ----- */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar,
+textarea::-webkit-scrollbar,
+select::-webkit-scrollbar,
+.tcdInput::-webkit-scrollbar,
+.gaModalInput::-webkit-scrollbar,
+.gaModalInputPlain::-webkit-scrollbar,
+.sqsOpenInput::-webkit-scrollbar,
+pre::-webkit-scrollbar,
+.mdBody::-webkit-scrollbar,
+.gaScroll::-webkit-scrollbar,
+.gaModal::-webkit-scrollbar,
+.gaModal *::-webkit-scrollbar,
+.sqsTutorThread::-webkit-scrollbar,
+.sqsTutorInput::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+#root::-webkit-scrollbar-track,
+textarea::-webkit-scrollbar-track,
+select::-webkit-scrollbar-track,
+.tcdInput::-webkit-scrollbar-track,
+.gaModalInput::-webkit-scrollbar-track,
+.gaModalInputPlain::-webkit-scrollbar-track,
+.sqsOpenInput::-webkit-scrollbar-track,
+pre::-webkit-scrollbar-track,
+.mdBody::-webkit-scrollbar-track,
+.gaScroll::-webkit-scrollbar-track,
+.gaModal::-webkit-scrollbar-track,
+.gaModal *::-webkit-scrollbar-track,
+.sqsTutorThread::-webkit-scrollbar-track,
+.sqsTutorInput::-webkit-scrollbar-track {
+  margin: 4px 0;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  border: 1px solid rgba(140, 150, 200, 0.12);
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+#root::-webkit-scrollbar-thumb,
+textarea::-webkit-scrollbar-thumb,
+select::-webkit-scrollbar-thumb,
+.tcdInput::-webkit-scrollbar-thumb,
+.gaModalInput::-webkit-scrollbar-thumb,
+.gaModalInputPlain::-webkit-scrollbar-thumb,
+.sqsOpenInput::-webkit-scrollbar-thumb,
+pre::-webkit-scrollbar-thumb,
+.mdBody::-webkit-scrollbar-thumb,
+.gaScroll::-webkit-scrollbar-thumb,
+.gaModal::-webkit-scrollbar-thumb,
+.gaModal *::-webkit-scrollbar-thumb,
+.sqsTutorThread::-webkit-scrollbar-thumb,
+.sqsTutorInput::-webkit-scrollbar-thumb {
+  background: #fff;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 135, 200, 0.28);
+  box-shadow: 0 1px 2px rgba(42, 60, 140, 0.06);
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+#root::-webkit-scrollbar-thumb:hover,
+textarea::-webkit-scrollbar-thumb:hover,
+select::-webkit-scrollbar-thumb:hover,
+.tcdInput::-webkit-scrollbar-thumb:hover,
+.gaModalInput::-webkit-scrollbar-thumb:hover,
+.gaModalInputPlain::-webkit-scrollbar-thumb:hover,
+.sqsOpenInput::-webkit-scrollbar-thumb:hover,
+pre::-webkit-scrollbar-thumb:hover,
+.mdBody::-webkit-scrollbar-thumb:hover,
+.gaScroll::-webkit-scrollbar-thumb:hover,
+.gaModal::-webkit-scrollbar-thumb:hover,
+.gaModal *::-webkit-scrollbar-thumb:hover,
+.sqsTutorThread::-webkit-scrollbar-thumb:hover,
+.sqsTutorInput::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(100, 115, 190, 0.38);
+}

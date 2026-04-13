@@ -147,6 +147,14 @@ export function getStudentClassTopics(classId) {
   return apiFetch(`/classes/student/classes/${classId}/topics`);
 }
 
+export function getStudentTopicDetail(classId, topicId) {
+  return apiFetch(`/classes/student/classes/${classId}/topics/${topicId}`);
+}
+
+export function getStudentTopicMainQuizLeaderboard(classId, topicId) {
+  return apiFetch(`/classes/student/classes/${classId}/topics/${topicId}/main-quiz-leaderboard`);
+}
+
 export function setStudentTopicDone(topicId, done) {
   return apiFetch(`/classes/student/topics/${topicId}/progress`, {
     method: "PUT",
@@ -162,15 +170,117 @@ export async function generateQuiz(classId, topicId, { mcq, yesno, final_open })
   });
 }
 
-export async function getFinalQuiz(topicId) {
-  return apiFetch(`/quiz/${topicId}`);
+export async function getFinalQuiz(classId, topicId) {
+  return apiFetch(`/quiz/${classId}/${topicId}`);
 }
 
-export async function saveFinalQuiz(topicId, quizJsonString) {
-  return apiFetch(`/quiz/${topicId}/final`, {
+export function getTeacherTopicQuizStats(classId, topicId) {
+  return apiFetch(`/quiz/${classId}/${topicId}/teacher-stats`);
+}
+
+function buildTeacherClassStatsQuery(params = {}) {
+  const q = new URLSearchParams();
+  if (params.topicId != null && params.topicId !== "") {
+    q.set("topic_id", String(params.topicId));
+  }
+  if (params.riskThresholdPercent != null && params.riskThresholdPercent !== "") {
+    q.set("risk_threshold_percent", String(params.riskThresholdPercent));
+  }
+  if (params.periodDays != null && params.periodDays !== "") {
+    q.set("period_days", String(params.periodDays));
+  }
+  if (params.thresholdPercent != null && params.thresholdPercent !== "") {
+    q.set("threshold_percent", String(params.thresholdPercent));
+  }
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+export function getTeacherClassStatsOverview(classId, { topicId, riskThresholdPercent } = {}) {
+  return apiFetch(
+    `/quiz/${classId}/stats/overview${buildTeacherClassStatsQuery({ topicId, riskThresholdPercent })}`
+  );
+}
+
+export function getTeacherClassStatsTrend(classId, { topicId, periodDays } = {}) {
+  return apiFetch(
+    `/quiz/${classId}/stats/trend${buildTeacherClassStatsQuery({ topicId, periodDays })}`
+  );
+}
+
+export function getTeacherClassTopicStats(classId, { topicId } = {}) {
+  return apiFetch(`/quiz/${classId}/stats/topics${buildTeacherClassStatsQuery({ topicId })}`);
+}
+
+export function getTeacherClassRiskStudents(classId, { topicId, thresholdPercent } = {}) {
+  return apiFetch(
+    `/quiz/${classId}/stats/risk-students${buildTeacherClassStatsQuery({ topicId, thresholdPercent })}`
+  );
+}
+
+export function regenerateTeacherClassRiskStudents(classId, { topicId, thresholdPercent } = {}) {
+  return apiFetch(
+    `/quiz/${classId}/stats/risk-students/regenerate${buildTeacherClassStatsQuery({
+      topicId,
+      thresholdPercent,
+    })}`,
+    { method: "POST" }
+  );
+}
+
+export function getTeacherClassStudentStatsDetail(classId, studentId, { topicId } = {}) {
+  return apiFetch(
+    `/quiz/${classId}/stats/students/${studentId}/detail${buildTeacherClassStatsQuery({ topicId })}`
+  );
+}
+
+export function getTeacherStudentQuizAttemptDetail(classId, topicId, studentId, attemptId) {
+  return apiFetch(
+    `/quiz/${classId}/${topicId}/teacher-stats/students/${studentId}/attempts/${attemptId}`
+  );
+}
+
+export async function saveFinalQuiz(classId, topicId, quizJsonString) {
+  return apiFetch(`/quiz/${classId}/${topicId}/final`, {
     method: "PUT",
     body: JSON.stringify({ quiz_json: quizJsonString }),
   });
+}
+
+export async function regenerateQuiz(classId, topicId, { quiz_json, user_note }) {
+  return apiFetch(`/quiz/${classId}/${topicId}/regenerate`, {
+    method: "POST",
+    body: JSON.stringify({ quiz_json, user_note }),
+  });
+}
+
+export function startStudentQuiz(classId, topicId) {
+  return apiFetch(`/quiz/${classId}/${topicId}/start`, { method: "POST" });
+}
+
+export function startStudentBonusQuiz(classId, topicId) {
+  return apiFetch(`/quiz/${classId}/${topicId}/bonus/start`, { method: "POST" });
+}
+
+export function submitStudentQuizAnswer(classId, topicId, attemptId, { question_id, answer }) {
+  return apiFetch(`/quiz/${classId}/${topicId}/attempts/${attemptId}/answer`, {
+    method: "POST",
+    body: JSON.stringify({ question_id, answer }),
+  });
+}
+
+export function finishStudentQuiz(classId, topicId, attemptId) {
+  return apiFetch(`/quiz/${classId}/${topicId}/attempts/${attemptId}/finish`, {
+    method: "POST",
+  });
+}
+
+export function listStudentQuizAttempts(classId, topicId) {
+  return apiFetch(`/quiz/${classId}/${topicId}/my-attempts`);
+}
+
+export function getStudentQuizAttemptDetail(classId, topicId, attemptId) {
+  return apiFetch(`/quiz/${classId}/${topicId}/my-attempts/${attemptId}`);
 }
 
 export async function fetchTopicHeader(classId, topicId) {
@@ -197,5 +307,14 @@ export const topicQuizApi = {
   generateQuiz,
   getFinalQuiz,
   saveFinalQuiz,
+  regenerateQuiz,
+  startStudentQuiz,
+  startStudentBonusQuiz,
+  submitStudentQuizAnswer,
+  finishStudentQuiz,
+  listStudentQuizAttempts,
+  getStudentQuizAttemptDetail,
+  getTeacherTopicQuizStats,
+  getTeacherStudentQuizAttemptDetail,
 };
 

@@ -202,8 +202,8 @@ html, body, #root {
 .decLabs {
   left: 28px;
   bottom: 100px;
-  width: 300px;
-  opacity: 0.55;
+  width: var(--gaDecorLabsWidth);
+  opacity: var(--gaDecorLabsOpacity);
   z-index: 1;
 }
 
@@ -233,7 +233,6 @@ html, body, #root {
     bottom: 12px;
   }
   .decLabs {
-    width: 120px;
     left: 14px;
     bottom: 14px;
   }

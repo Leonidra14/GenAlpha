@@ -30,8 +30,8 @@ html, body, #root { height: 100%; }
 .tmainLabs{
   right: 28px;
   bottom: 18px;
-  width: 400px;
-  opacity: .55;
+  width: var(--gaDecorLabsWidth);
+  opacity: var(--gaDecorLabsOpacity);
   z-index: 1;
 }
 
@@ -94,6 +94,12 @@ html, body, #root { height: 100%; }
   background: rgba(255, 230, 230, 0.75);
   border: 1px solid rgba(255, 120, 120, 0.35);
   color: rgba(150, 20, 20, 0.95);
+}
+
+.tmainEmptyState{
+  background: transparent;
+  border-color: transparent;
+  color: rgba(35,36,58,0.72);
 }
 
 .tmainSectionHeader{

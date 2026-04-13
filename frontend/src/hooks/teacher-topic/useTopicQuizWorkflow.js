@@ -17,6 +17,7 @@ export function useTopicQuizWorkflow({ classId, topicId, classDetail, setError }
   const [quizRegenLoading, setQuizRegenLoading] = useState(false);
 
   const quizVersionCounterRef = useRef(0);
+  const autoSavedFirstQuizRef = useRef(false);
 
   function snapshotQuiz(quizObj, label) {
     quizVersionCounterRef.current += 1;
@@ -39,7 +40,7 @@ export function useTopicQuizWorkflow({ classId, topicId, classDetail, setError }
     let cancelled = false;
     async function loadQuizDb() {
       try {
-        const q = await topicQuizApi.getFinalQuiz(topicId);
+        const q = await topicQuizApi.getFinalQuiz(classId, topicId);
         if (cancelled) return;
         const raw = (q?.basic_quiz || "").trim();
         if (!raw) return;
@@ -47,6 +48,7 @@ export function useTopicQuizWorkflow({ classId, topicId, classDetail, setError }
         const id = snapshotQuiz(parsed, "Z DB (finální)");
         setActiveQuizVersionId((prev) => prev || id);
         setDbQuizVersionId(id);
+        autoSavedFirstQuizRef.current = true;
         setQuizDraftJson(safeJsonStringify(parsed));
         setIsEditingQuiz(false);
       } catch {
@@ -57,7 +59,20 @@ export function useTopicQuizWorkflow({ classId, topicId, classDetail, setError }
     return () => {
       cancelled = true;
     };
-  }, [topicId]);
+  }, [classId, topicId]);
+
+  async function autoSaveFirstGeneratedQuizToDb(quizObj, createdVersionId) {
+    if (autoSavedFirstQuizRef.current || dbQuizVersionId) return;
+    autoSavedFirstQuizRef.current = true;
+    try {
+      await topicQuizApi.saveFinalQuiz(classId, topicId, JSON.stringify(quizObj));
+      setDbQuizVersionId(createdVersionId);
+      setError("✅ Kvíz byl automaticky trvale uložen.");
+    } catch (e) {
+      autoSavedFirstQuizRef.current = false;
+      throw e;
+    }
+  }
 
   async function onGenerateQuiz() {
     setError("");
@@ -75,7 +90,8 @@ export function useTopicQuizWorkflow({ classId, topicId, classDetail, setError }
       const id = snapshotQuiz(quizObj, "Vygenerováno");
       setActiveQuizVersionId(id);
       setQuizDraftJson(safeJsonStringify(quizObj));
-      setIsEditingQuiz(true);
+      setIsEditingQuiz(false);
+      await autoSaveFirstGeneratedQuizToDb(quizObj, id);
     } catch (e) {
       setError(e?.message || "Nepodařilo se vygenerovat kvíz.");
     } finally {
@@ -93,9 +109,22 @@ export function useTopicQuizWorkflow({ classId, topicId, classDetail, setError }
       setError("Není vybrána žádná verze kvízu k úpravě.");
       return;
     }
+    const activeQuiz = getQuizById(activeQuizVersionId);
+    if (!activeQuiz?.quizSnapshot) {
+      setError("Aktivní verze kvízu neobsahuje data pro úpravu.");
+      return;
+    }
     setQuizRegenLoading(true);
     try {
-      alert("Tlačítko funguje! Aby se kvíz reálně upravil, je potřeba dopsat funkci regenerateQuiz do api.js a backendu.");
+      const data = await topicQuizApi.regenerateQuiz(classId, topicId, {
+        quiz_json: JSON.stringify(activeQuiz.quizSnapshot),
+        user_note: userNote.trim(),
+      });
+      const id = snapshotQuiz(data, "Regenerace: quiz");
+      setActiveQuizVersionId(id);
+      setQuizDraftJson(safeJsonStringify(data));
+      setIsEditingQuiz(false);
+      setError("✅ Kvíz upraven podle poznámky.");
       if (onDone) onDone();
     } catch (e) {
       setError(e?.message || "Nepodařilo se přegenerovat kvíz.");
@@ -120,9 +149,9 @@ export function useTopicQuizWorkflow({ classId, topicId, classDetail, setError }
     setQuizSaveLoading(true);
     try {
       const normalized = JSON.stringify(parsed);
-      await topicQuizApi.saveFinalQuiz(topicId, normalized);
+      await topicQuizApi.saveFinalQuiz(classId, topicId, normalized);
       setDbQuizVersionId(activeQuizVersionId);
-      setError("✅ Quiz finální uložen do DB.");
+      setError("✅ Kvíz finální uložen do DB.");
       setIsEditingQuiz(false);
     } catch (e) {
       setError(e?.message || "Nepodařilo se uložit finální kvíz.");

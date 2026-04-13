@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
-from sqlalchemy import and_
+from sqlalchemy import and_, func
 from datetime import datetime
 
 
@@ -16,8 +16,11 @@ from app.schemas.classes import ClassCreate
 from models.topics import Topic
 from app.schemas.topics import TopicOut
 from models.topic_progress import TopicProgress
+from models.quiz_attempts import QuizAttempt
 from app.schemas.students import StudentClassDetailOut
 from app.schemas.topic_progress import (
+    MainQuizLeaderboardOut,
+    MainQuizLeaderboardPodiumEntryOut,
     StudentTopicDetailOut,
     TopicWithProgressOut,
     TopicProgressUpdateIn,
@@ -279,12 +282,119 @@ def student_topic_detail(
         raise HTTPException(status_code=404, detail="Topic not found")
 
     quiz_available = bool((topic.basic_quiz or "").strip())
+    notes_nonempty = bool((topic.student_notes_md or "").strip())
+    bonus_quiz_available = False
+    if quiz_available and notes_nonempty:
+        bonus_quiz_available = (
+            db.query(QuizAttempt)
+            .filter(
+                QuizAttempt.class_id == class_id,
+                QuizAttempt.topic_id == topic_id,
+                QuizAttempt.student_id == user.id,
+                QuizAttempt.finished_at.isnot(None),
+                QuizAttempt.attempt_kind == "main",
+            )
+            .first()
+            is not None
+        )
+
     return StudentTopicDetailOut(
         topic_id=topic.id,
         title=topic.title,
         student_notes_md=topic.student_notes_md or "",
         quiz_available=quiz_available,
+        bonus_quiz_available=bonus_quiz_available,
     )
+
+
+@router.get(
+    "/student/classes/{class_id}/topics/{topic_id}/main-quiz-leaderboard",
+    response_model=MainQuizLeaderboardOut,
+)
+def student_topic_main_quiz_leaderboard(
+    class_id: int,
+    topic_id: int,
+    user=Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Nejlepší skóre z hlavního kvízu jen pro žáky zapsané ve třídě; stupně vítězů = první 3."""
+    enr = db.query(Enrollment).filter(
+        Enrollment.class_id == class_id,
+        Enrollment.student_id == user.id,
+    ).first()
+    if not enr:
+        raise HTTPException(status_code=403, detail="Not enrolled in this class")
+
+    topic = db.query(Topic).filter(
+        Topic.id == topic_id,
+        Topic.class_id == class_id,
+        Topic.active == True,
+    ).first()
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+
+    enrolled_rows = (
+        db.query(Enrollment.student_id)
+        .filter(Enrollment.class_id == class_id)
+        .all()
+    )
+    enrolled_ids = [int(r[0]) for r in enrolled_rows]
+    if not enrolled_ids:
+        return MainQuizLeaderboardOut(podium=[], my_rank=None, my_best_score=None)
+
+    attempts_agg = (
+        db.query(
+            QuizAttempt.student_id,
+            func.max(QuizAttempt.score).label("best_score"),
+        )
+        .filter(
+            QuizAttempt.class_id == class_id,
+            QuizAttempt.topic_id == topic_id,
+            QuizAttempt.attempt_kind == "main",
+            QuizAttempt.student_id.in_(enrolled_ids),
+        )
+        .group_by(QuizAttempt.student_id)
+        .all()
+    )
+    best_by_student = {int(sid): float(sc) for sid, sc in attempts_agg}
+    sorted_pairs = sorted(best_by_student.items(), key=lambda x: (-x[1], x[0]))
+
+    podium_ids = [sid for sid, _ in sorted_pairs[:3]]
+    users_by_id = {}
+    if podium_ids:
+        for u in db.query(User).filter(User.id.in_(podium_ids)).all():
+            users_by_id[int(u.id)] = u
+
+    def display_name_for(sid: int) -> str:
+        u = users_by_id.get(int(sid))
+        if not u:
+            return f"Student {sid}"
+        fn = (getattr(u, "first_name", None) or "").strip()
+        ln = (getattr(u, "last_name", None) or "").strip()
+        return f"{fn} {ln}".strip() or f"Student {sid}"
+
+    podium: list[MainQuizLeaderboardPodiumEntryOut] = []
+    for place_idx, (sid, sc) in enumerate(sorted_pairs[:3]):
+        podium.append(
+            MainQuizLeaderboardPodiumEntryOut(
+                place=place_idx + 1,
+                student_id=sid,
+                display_name=display_name_for(sid),
+                best_score=sc,
+            )
+        )
+
+    my_best = best_by_student.get(int(user.id))
+    my_rank = None
+    if my_best is not None:
+        my_rank = 1 + sum(1 for _, sc in sorted_pairs if sc > my_best)
+
+    return MainQuizLeaderboardOut(
+        podium=podium,
+        my_rank=my_rank,
+        my_best_score=float(my_best) if my_best is not None else None,
+    )
+
 
 @router.put("/student/topics/{topic_id}/progress", response_model=dict)
 def student_set_topic_done(

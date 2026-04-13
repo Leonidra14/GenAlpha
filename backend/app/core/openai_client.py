@@ -33,3 +33,11 @@ def temp_autotag() -> float:
 
 def temp_quality() -> float:
     return settings.openai_temp_quality
+
+
+def temp_tutor_guard() -> float:
+    return settings.openai_temp_tutor_guard
+
+
+def temp_tutor_socratic() -> float:
+    return settings.openai_temp_tutor_socratic

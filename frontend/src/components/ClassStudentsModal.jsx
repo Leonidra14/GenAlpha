@@ -15,17 +15,14 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
 
   const [students, setStudents] = useState([]);
 
-  // available (not enrolled) students
   const [available, setAvailable] = useState([]);
   const [search, setSearch] = useState("");
 
-  // create + enroll
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // password change
   const [pwOpenFor, setPwOpenFor] = useState(null);
   const [newPw, setNewPw] = useState("");
 
@@ -105,12 +102,19 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
 
     setLoading(true);
     try {
-      await createAndEnrollStudent(classId, {
+      const res = await createAndEnrollStudent(classId, {
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         email: email.trim() || null,
         password,
       });
+
+      const lk = res?.student?.login_key;
+      if (lk) {
+        window.alert(
+          `Student byl vytvořen.\n\nPřihlašovací jméno pro žáka: ${lk}\n\n(Ulož si ho nebo ho předej žákovi.)`,
+        );
+      }
 
       resetCreateForm();
       await loadStudents();
@@ -157,140 +161,45 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
     }
   }
 
-  // ✅ světlé/glass styly (ladí s tcd designem)
-  const styles = {
-    section: {
-      padding: 14,
-      borderRadius: 18,
-      border: "1px solid rgba(90,120,255,0.18)",
-      background: "rgba(255,255,255,0.72)",
-      boxShadow:
-        "0 14px 28px rgba(26,52,160,0.10), inset 0 1px 0 rgba(255,255,255,0.65)",
-      backdropFilter: "blur(10px)",
-      marginBottom: 12,
-      color: "rgba(35,36,58,0.92)",
-    },
-    h2: { margin: 0, marginBottom: 10, fontSize: 18, fontWeight: 900, color: "rgba(35,36,58,0.85)" },
-    label: { display: "block", fontSize: 12, color: "rgba(35,36,58,0.65)", marginBottom: 6, fontWeight: 800 },
-    input: {
-      width: "100%",
-      padding: "10px 12px",
-      borderRadius: 14,
-      border: "1px solid rgba(120,130,180,0.22)",
-      background: "rgba(255,255,255,0.78)",
-      color: "rgba(35,36,58,0.92)",
-      outline: "none",
-      boxSizing: "border-box",
-      boxShadow: "0 10px 18px rgba(60,80,190,0.08)",
-    },
-    row2: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 },
-
-    btn: {
-      padding: "10px 12px",
-      borderRadius: 12,
-      border: 0,
-      background: "linear-gradient(90deg, #3f6bff, #6a5cff)",
-      color: "#fff",
-      cursor: "pointer",
-      minWidth: 108,
-      fontWeight: 900,
-      boxShadow: "0 16px 26px rgba(63,107,255,0.22)",
-      whiteSpace: "nowrap",
-    },
-    btnSmall: {
-      padding: "8px 10px",
-      borderRadius: 12,
-      border: "1px solid rgba(130,140,190,0.30)",
-      background: "rgba(255,255,255,0.65)",
-      color: "rgba(35,36,58,0.78)",
-      cursor: "pointer",
-      fontWeight: 900,
-      whiteSpace: "nowrap",
-      boxShadow: "0 10px 18px rgba(60,80,190,0.10)",
-    },
-    btnDanger: {
-      padding: "8px 10px",
-      borderRadius: 999,
-      border: 0,
-      background: "linear-gradient(90deg, #ff7aa8, #ff6a8a)",
-      color: "#fff",
-      cursor: "pointer",
-      fontWeight: 900,
-      whiteSpace: "nowrap",
-    },
-
-    table: { width: "100%", borderCollapse: "collapse" },
-    theadTr: { borderBottom: "1px solid rgba(120,130,180,0.18)" },
-    th: {
-      textAlign: "left",
-      padding: "10px 6px",
-      fontSize: 12,
-      color: "rgba(35,36,58,0.55)",
-      fontWeight: 900,
-    },
-    tr: { borderTop: "1px solid rgba(120,130,180,0.12)" },
-    td: { padding: "10px 6px", verticalAlign: "middle", fontSize: 14, color: "rgba(35,36,58,0.78)" },
-
-    scrollBox: {
-      marginTop: 10,
-      maxHeight: 170,
-      overflowY: "auto",
-      borderRadius: 14,
-      border: "1px solid rgba(120,130,180,0.18)",
-      background: "rgba(255,255,255,0.55)",
-    },
-
-    muted: { color: "rgba(35,36,58,0.55)", fontSize: 12 },
-    error: {
-      marginTop: 10,
-      padding: 10,
-      borderRadius: 14,
-      border: "1px solid rgba(255,120,120,0.35)",
-      background: "rgba(255,230,230,0.75)",
-      color: "rgba(150,20,20,0.95)",
-      fontSize: 13,
-      fontWeight: 800,
-    },
-  };
-
   return (
     <Modal open={open} onClose={onClose} title="Studenti">
-      {/* CURRENT STUDENTS */}
-      <div style={styles.section}>
-        <h2 style={styles.h2}>
-          Aktuální studenti <span style={styles.muted}>({students.length})</span>
+      <div className="gaModalSection">
+        <h2 className="gaModalSectionTitle">
+          Aktuální studenti <span className="gaModalMuted">({students.length})</span>
         </h2>
 
-        {loading && <div style={styles.muted}>Načítám…</div>}
+        {loading && <div className="gaModalMuted">Načítám…</div>}
 
         {!loading && students.length === 0 && (
-          <div style={styles.muted}>Zatím tu nejsou žádní studenti.</div>
+          <div className="gaModalMuted">Zatím tu nejsou žádní studenti.</div>
         )}
 
         {!loading && students.length > 0 && (
-          <table style={styles.table}>
+          <table className="gaModalTable">
             <thead>
-              <tr style={styles.theadTr}>
-                <th style={styles.th}>ID</th>
-                <th style={styles.th}>Jméno</th>
-                <th style={styles.th}>Příjmení</th>
-                <th style={styles.th}>E-mail</th>
-                <th style={{ ...styles.th, textAlign: "right" }}>Akce</th>
+              <tr>
+                <th className="gaModalTh">ID</th>
+                <th className="gaModalTh">Jméno</th>
+                <th className="gaModalTh">Příjmení</th>
+                <th className="gaModalTh">Přihlášení</th>
+                <th className="gaModalTh">E-mail</th>
+                <th className="gaModalTh gaModalThRight">Akce</th>
               </tr>
             </thead>
 
             <tbody>
               {students.map((s) => (
-                <tr key={s.id} style={styles.tr}>
-                  <td style={styles.td}>{s.id}</td>
-                  <td style={styles.td}>{s.first_name || "—"}</td>
-                  <td style={styles.td}>{s.last_name || "—"}</td>
-                  <td style={styles.td}>{s.email || "bez e-mailu"}</td>
+                <tr key={s.id} className="gaModalTr">
+                  <td className="gaModalTd">{s.id}</td>
+                  <td className="gaModalTd">{s.first_name || "—"}</td>
+                  <td className="gaModalTd">{s.last_name || "—"}</td>
+                  <td className="gaModalTd gaModalTdMono">{s.login_key || "—"}</td>
+                  <td className="gaModalTd">{s.email || "bez e-mailu"}</td>
 
-                  <td style={{ ...styles.td, textAlign: "right" }}>
-                    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", flexWrap: "wrap" }}>
+                  <td className="gaModalTd gaModalTdRight">
+                    <div className="gaModalTableActions">
                       <button
-                        style={styles.btnSmall}
+                        className="tcdBtn compact"
                         type="button"
                         disabled={loading}
                         onClick={() => setPwOpenFor((prev) => (prev === s.id ? null : s.id))}
@@ -299,7 +208,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                       </button>
 
                       <button
-                        style={styles.btnDanger}
+                        className="tcdBtn pillDanger compact"
                         type="button"
                         disabled={loading}
                         onClick={() => handleRemove(s.id)}
@@ -309,19 +218,19 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                     </div>
 
                     {pwOpenFor === s.id && (
-                      <div style={{ marginTop: 10 }}>
-                        <div style={styles.label}>Nové heslo (8–72)</div>
+                      <div className="gaModalPwBlock">
+                        <div className="gaModalLabel">Nové heslo (8–72)</div>
                         <input
-                          style={styles.input}
+                          className="gaModalInput"
                           type="password"
                           value={newPw}
                           onChange={(e) => setNewPw(e.target.value)}
                           placeholder="Zadej nové heslo"
                           maxLength={72}
                         />
-                        <div style={{ display: "flex", gap: 8, marginTop: 8, justifyContent: "flex-end" }}>
+                        <div className="gaModalPwActions">
                           <button
-                            style={styles.btnSmall}
+                            className="tcdBtn compact"
                             type="button"
                             disabled={loading}
                             onClick={() => {
@@ -333,7 +242,7 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
                           </button>
 
                           <button
-                            style={styles.btn}
+                            className="tcdBtn primary compact"
                             type="button"
                             disabled={loading}
                             onClick={() => handleSetPassword(s.id)}
@@ -350,54 +259,65 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
           </table>
         )}
 
-        {err && <div style={styles.error}>{err}</div>}
+        {err && <div className="gaModalError">{err}</div>}
       </div>
 
-      {/* AVAILABLE STUDENTS (NOT ENROLLED) */}
-      <div style={styles.section}>
-        <h2 style={styles.h2}>Přidat existujícího studenta</h2>
+      <div className="gaModalSection">
+        <h2 className="gaModalSectionTitle">Přidat existujícího studenta</h2>
 
-        <div style={styles.label}>Hledat (jméno / příjmení / e-mail / user ID)</div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+        <div className="gaModalLabel">Hledat (jméno / příjmení / přihlášení / e-mail / user ID)</div>
+        <div className="gaModalSearchRow">
           <input
-            style={styles.input}
+            className="gaModalInput"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="např. Novák, student@email.cz nebo 14"
             maxLength={100}
           />
-          <button style={styles.btn} type="button" disabled={loading} onClick={() => loadAvailable(search)}>
+          <button
+            className="tcdBtn primary"
+            type="button"
+            disabled={loading}
+            onClick={() => loadAvailable(search)}
+          >
             🔎 Hledat
           </button>
         </div>
 
         {!loading && available.length === 0 && (
-          <div style={{ marginTop: 10, ...styles.muted }}>Žádní dostupní studenti.</div>
+          <div className="gaModalHint">Žádní dostupní studenti.</div>
         )}
 
         {!loading && available.length > 0 && (
-        <div className="gaScroll" style={styles.scrollBox}>
-            <table style={styles.table}>
+          <div className="gaModalScrollBox">
+            <table className="gaModalTable">
               <thead>
-                <tr style={styles.theadTr}>
-                  <th style={styles.th}>ID</th>
-                  <th style={styles.th}>Jméno</th>
-                  <th style={styles.th}>Příjmení</th>
-                  <th style={styles.th}>E-mail</th>
-                  <th style={{ ...styles.th, textAlign: "right" }}>Akce</th>
+                <tr>
+                  <th className="gaModalTh">ID</th>
+                  <th className="gaModalTh">Jméno</th>
+                  <th className="gaModalTh">Příjmení</th>
+                  <th className="gaModalTh">Přihlášení</th>
+                  <th className="gaModalTh">E-mail</th>
+                  <th className="gaModalTh gaModalThRight">Akce</th>
                 </tr>
               </thead>
 
               <tbody>
                 {available.map((s) => (
-                  <tr key={s.id} style={styles.tr}>
-                    <td style={styles.td}>{s.id}</td>
-                    <td style={styles.td}>{s.first_name || "—"}</td>
-                    <td style={styles.td}>{s.last_name || "—"}</td>
-                    <td style={styles.td}>{s.email || "bez e-mailu"}</td>
+                  <tr key={s.id} className="gaModalTr">
+                    <td className="gaModalTd">{s.id}</td>
+                    <td className="gaModalTd">{s.first_name || "—"}</td>
+                    <td className="gaModalTd">{s.last_name || "—"}</td>
+                    <td className="gaModalTd gaModalTdMono">{s.login_key || "—"}</td>
+                    <td className="gaModalTd">{s.email || "bez e-mailu"}</td>
 
-                    <td style={{ ...styles.td, textAlign: "right" }}>
-                      <button style={styles.btnSmall} type="button" disabled={loading} onClick={() => handleEnrollExisting(s.id)}>
+                    <td className="gaModalTd gaModalTdRight">
+                      <button
+                        className="tcdBtn compact"
+                        type="button"
+                        disabled={loading}
+                        onClick={() => handleEnrollExisting(s.id)}
+                      >
                         ➕ Zapsat
                       </button>
                     </td>
@@ -409,19 +329,20 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
         )}
       </div>
 
-      {/* CREATE + ENROLL */}
-      <div style={styles.section}>
-        <h2 style={styles.h2}>Vytvořit a zapsat nového studenta</h2>
-        <div style={{ marginTop: 10, ...styles.muted }}>
-          Před vytvořením se ujisti, že tento student ještě nemá účet. Pokud ano, můžete ho jednoduše zapsat pomocí předchozího formuláře. 
+      <div className="gaModalSection">
+        <h2 className="gaModalSectionTitle">Vytvořit a zapsat nového studenta</h2>
+        <div className="gaModalHint">
+          Před vytvořením se ujisti, že tento student ještě nemá účet. Pokud ano, můžete ho jednoduše zapsat
+          pomocí předchozího formuláře. Přihlašovací jméno žáka vznikne z příjmení (bez háčků, malá písmena) a
+          čísla ID účtu, např. koroptvicka15.
         </div>
 
         <form onSubmit={handleCreateAndEnroll}>
-          <div style={styles.row2}>
+          <div className="gaModalRow2">
             <div>
-              <div style={styles.label}>Jméno *</div>
+              <div className="gaModalLabel">Jméno *</div>
               <input
-                style={styles.input}
+                className="gaModalInput"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Např. Jan"
@@ -429,21 +350,23 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
               />
             </div>
             <div>
-              <div style={styles.label}>Příjmení *</div>
+              <div className="gaModalLabel">Příjmení *</div>
               <input
-                style={styles.input}
+                className="gaModalInput"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Např. Novák"
                 maxLength={100}
+                required
+                aria-required="true"
               />
             </div>
           </div>
 
-          <div style={{ marginTop: 10 }}>
-            <div style={styles.label}>E-mail (volitelné)</div>
+          <div className="gaModalFieldGap">
+            <div className="gaModalLabel">E-mail (volitelné)</div>
             <input
-              style={styles.input}
+              className="gaModalInput"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="student@email.cz"
@@ -451,10 +374,10 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
             />
           </div>
 
-          <div style={{ marginTop: 10 }}>
-            <div style={styles.label}>Heslo *</div>
+          <div className="gaModalFieldGap">
+            <div className="gaModalLabel">Heslo *</div>
             <input
-              style={styles.input}
+              className="gaModalInput"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -463,8 +386,8 @@ export default function ClassStudentsModal({ open, onClose, classId, onChanged }
             />
           </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 12 }}>
-            <button style={styles.btn} disabled={loading} type="submit">
+          <div className="gaModalActionsSpaced">
+            <button className="tcdBtn primary" disabled={loading} type="submit">
               ➕ Vytvořit a zapsat
             </button>
           </div>

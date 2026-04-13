@@ -12,6 +12,7 @@ from models.users import User
 from app.schemas.students import StudentCreate, StudentPasswordUpdate, StudentOut
 from app.schemas.enrollments import EnrollmentOut
 from app.core.security import hash_password
+from app.core.student_login_key import build_student_login_key
 
 
 router = APIRouter(tags=["enrollments"])
@@ -38,14 +39,25 @@ def create_and_enroll_student(class_id: int, payload: StudentCreate, user=Depend
     if not pw or len(pw) < 8 or len(pw) > 72:
         raise HTTPException(status_code=422, detail="Password must be 8–72 characters")
 
+    em = (payload.email or "").strip() or None
+
     student = User(
         first_name=fn,
         last_name=ln,
-        email=payload.email.strip() if payload.email else None,
+        email=em,
         role="student",
         hashed_password=hash_password(pw),
     )
     db.add(student)
+    db.flush()
+    try:
+        student.login_key = build_student_login_key(ln, student.id)
+    except ValueError:
+        db.rollback()
+        raise HTTPException(
+            status_code=422,
+            detail="Z příjmení nelze vytvořit přihlašovací jméno — použij písmena nebo číslice.",
+        )
     db.commit()
     db.refresh(student)
 
@@ -140,6 +152,7 @@ def available_students_for_class(
                 User.first_name.ilike(term),
                 User.last_name.ilike(term),
                 User.email.ilike(term),
+                User.login_key.ilike(term),
                 cast(User.id, String).ilike(term),
             )
         )
