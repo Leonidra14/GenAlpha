@@ -16,6 +16,9 @@ jobs:
       # instalace a build ve složce frontend
       - run: npm ci
         working-directory: frontend
+      - name: Run unit tests
+        run: npm run test
+        working-directory: frontend
       - run: npm run build
         working-directory: frontend
 
