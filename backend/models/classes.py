@@ -5,6 +5,8 @@ from database.database import Base
 
 
 class Class(Base):
+    """A school class (grade + subject) owned by one teacher; has topics and enrollments."""
+
     __tablename__ = "classes"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -15,7 +17,7 @@ class Class(Base):
     note = Column(String, nullable=True)
     active = Column(Boolean, nullable=False, server_default="true")
 
-    # vztahy
+    # relationships
     teacher = relationship("User", back_populates="classes")
     enrollments = relationship(
         "Enrollment",

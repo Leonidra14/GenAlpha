@@ -3,8 +3,8 @@ import Modal from "./Modal";
 import { createClass, getClassDetail, updateClass } from "../api/api";
 
 /**
- * Vytvoření nové třídy (editingClassId == null) nebo úprava existující (editingClassId).
- * Stejný formulář a vzhled; edit jen načte data a volá update.
+ * Create a class (editingClassId == null) or edit an existing one.
+ * Same form and layout; edit loads row data and calls update.
  */
 export default function ClassFormModal({ open, onClose, editingClassId = null, onSuccess }) {
   const isEdit = editingClassId != null && editingClassId !== "";

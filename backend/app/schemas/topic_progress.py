@@ -29,9 +29,9 @@ class StudentTopicDetailOut(BaseModel):
 
 
 class MainQuizLeaderboardPodiumEntryOut(BaseModel):
-    """Jedna příčka žebříčku (max. 3) – nejlepší skóre z hlavního kvízu v kapitole."""
+    """Single podium slot (max 3): best main-quiz score in the topic."""
 
-    place: int  # 1, 2, 3 v pořadí na stupních vítězů
+    place: int  # 1–3 on the podium
     student_id: int
     display_name: str
     best_score: float
@@ -39,5 +39,5 @@ class MainQuizLeaderboardPodiumEntryOut(BaseModel):
 
 class MainQuizLeaderboardOut(BaseModel):
     podium: List[MainQuizLeaderboardPodiumEntryOut]
-    my_rank: Optional[int] = None  # místo mezi spolužáky s alespoň jedním pokusem; None = bez pokusu
+    my_rank: Optional[int] = None  # rank among classmates with ≥1 attempt; None if no attempt
     my_best_score: Optional[float] = None

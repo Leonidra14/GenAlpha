@@ -6,7 +6,6 @@
   gap: 12px;
 }
 
-/* Stejný vertikální rytmus jako u karet „Trvale uložené verze“ / „Finální verze“ */
 .ttRightPanelCardBody {
   display: flex;
   flex-direction: column;
@@ -16,7 +15,6 @@
 .ttUploadDropZone {
   border: 2px dashed rgba(120, 120, 255, 0.35);
   border-radius: 18px;
-  /* Bez bočního paddingu — zarovnání s textem v .ttDbCardBody (jen vnitřek .tcdCard) */
   padding: 10px 0 12px;
   background: rgba(255, 255, 255, 0.55);
   box-sizing: border-box;

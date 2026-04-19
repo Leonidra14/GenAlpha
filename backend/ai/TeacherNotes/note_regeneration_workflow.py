@@ -21,16 +21,14 @@ def run_regen_workflow(
     student_notes_md: str,
 ) -> Tuple[str, str]:
     """
-    Vrátí:
-      teacher_md, student_md
-    Regenerace pracuje jen s aktuálním markdownem + user_note (bez extracted/meta).
+    Returns (teacher_md, student_md).
+    Regeneration uses current markdown + user_note only (no extracted/meta).
     """
 
     teacher_out = teacher_notes_md or ""
     student_out = student_notes_md or ""
     max_retries = 3
 
-    # --- REGENERACE UČITELSKÝCH POZNÁMEK ---
     if target in ("teacher", "both"):
         user_text = teacher_regen_user(
             current_md=teacher_out,
@@ -48,14 +46,13 @@ def run_regen_workflow(
                     ],
                 )
                 teacher_out = resp.output_text.strip()
-                break  # Úspěch, vyskočíme z loopu
+                break
             except Exception as e:
                 if attempt == max_retries - 1:
                     logger.error(f"Regenerace učitelských poznámek definitivně selhala: {e}")
                     raise e
                 logger.warning(f"Pokus {attempt + 1} o regeneraci učitelských poznámek selhal: {e}")
 
-    # --- REGENERACE STUDENTSKÝCH POZNÁMEK ---
     if target in ("student", "both"):
         user_text = student_regen_user(
             current_md=student_out,

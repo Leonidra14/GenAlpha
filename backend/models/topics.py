@@ -5,6 +5,8 @@ from database.database import Base
 
 
 class Topic(Base):
+    """Chapter inside a class: generated notes, stored quiz JSON, progress per student."""
+
     __tablename__ = "topics"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -15,6 +17,6 @@ class Topic(Base):
     student_notes_md = Column(Text, nullable=True)
     basic_quiz = Column(Text, nullable=True) 
 
-    # vztahy
+    # relationships
     class_id = Column(Integer, ForeignKey("classes.id", ondelete="CASCADE"), nullable=False)
     class_ = relationship("Class", back_populates="topics")

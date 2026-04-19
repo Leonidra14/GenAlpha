@@ -1,3 +1,5 @@
+"""Create students and enroll them; list students available to add to a class (mounted under /classes)."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session, joinedload
 from typing import Optional
@@ -24,7 +26,7 @@ def ensure_teacher_owns_class(db: Session, class_id: int, teacher_id: int) -> Cl
     return cl
 
 
-# GET /classes/{class_id}/students je v routers/classes.py (StudentOut).
+# GET /classes/{class_id}/students lives in routers/classes.py (StudentOut).
 
 @router.post("/{class_id}/students", response_model=EnrollmentOut)
 def create_and_enroll_student(class_id: int, payload: StudentCreate, user=Depends(require_teacher), db: Session = Depends(get_db)):
@@ -130,13 +132,12 @@ def set_student_password(
 @router.get("/{class_id}/students/available", response_model=list[StudentOut])
 def available_students_for_class(
     class_id: int,
-    q: Optional[str] = None,  # query pro hledání
+    q: Optional[str] = None,
     db: Session = Depends(get_db),
     user=Depends(require_teacher),
 ):
     ensure_teacher_owns_class(db, class_id, user.id)
 
-    # subquery: student_id kteří už jsou zapsaní
     enrolled_subq = select(Enrollment.student_id).filter(Enrollment.class_id == class_id)
 
     query = (
@@ -169,7 +170,6 @@ def enroll_existing_student(
 ):
     ensure_teacher_owns_class(db, class_id, user.id)
 
-    # ověř, že student existuje a je role student
     student = (
         db.query(User)
         .filter(User.id == student_id, User.role == "student")
@@ -178,7 +178,6 @@ def enroll_existing_student(
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
 
-    # už je zapsaný?
     existing = (
         db.query(Enrollment)
         .filter(Enrollment.class_id == class_id, Enrollment.student_id == student_id)

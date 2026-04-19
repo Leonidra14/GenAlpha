@@ -1,3 +1,6 @@
+/**
+ * Route map: teacher vs student areas, quiz session + results (attemptId in URL for main/bonus).
+ */
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import RoleSelect from "./pages/RoleSelect";

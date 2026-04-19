@@ -433,7 +433,7 @@ class QuizAttemptAnswerTeacherRowOut(BaseModel):
     feedback: Optional[str] = None
     correct_answer: Optional[str] = None
     explanation: Optional[str] = None
-    # final_open: z rubriky LLM, uloženo v answers_json; student API je nevrací
+    # final_open rubric fields from LLM; stored in answers_json; omitted from student API
     teacher_summary: Optional[str] = None
     teacher_recommendation: Optional[str] = None
     final_open_criteria: Optional[FinalOpenCriteriaEval] = None

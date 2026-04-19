@@ -1,3 +1,5 @@
+"""Teacher endpoints: generate notes from text/PDF/images, and regenerate from a user note."""
+
 import base64
 import io
 from pathlib import Path

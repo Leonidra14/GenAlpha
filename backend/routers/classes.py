@@ -1,3 +1,5 @@
+"""Classes and topics CRUD for teachers, student class/topic views, enrollments listing, leaderboards."""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from typing import List
@@ -149,7 +151,6 @@ def create_class(
     db: Session = Depends(get_db),
     teacher=Depends(require_teacher),
 ):
-    # základní validace
     if not payload.subject.strip():
         raise HTTPException(status_code=400, detail="Subject is required")
     if payload.grade is None or payload.grade <= 0:
@@ -194,7 +195,6 @@ def student_classes_me(user=Depends(require_student), db: Session = Depends(get_
 
 @router.get("/student/classes/{class_id}", response_model=StudentClassDetailOut)
 def student_class_detail(class_id: int, user=Depends(require_student), db: Session = Depends(get_db)):
-    # musí být zapsaný
     enr = db.query(Enrollment).filter(
         Enrollment.class_id == class_id,
         Enrollment.student_id == user.id
@@ -317,7 +317,7 @@ def student_topic_main_quiz_leaderboard(
     user=Depends(require_student),
     db: Session = Depends(get_db),
 ):
-    """Nejlepší skóre z hlavního kvízu jen pro žáky zapsané ve třídě; stupně vítězů = první 3."""
+    """Top main-quiz scores among class enrollees; podium = top 3."""
     enr = db.query(Enrollment).filter(
         Enrollment.class_id == class_id,
         Enrollment.student_id == user.id,
@@ -407,7 +407,6 @@ def student_set_topic_done(
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
 
-    # student musí být zapsaný v topic.class_id
     enr = db.query(Enrollment).filter(
         Enrollment.class_id == topic.class_id,
         Enrollment.student_id == user.id

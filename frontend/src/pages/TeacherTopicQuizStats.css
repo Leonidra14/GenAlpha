@@ -1,4 +1,3 @@
-/* Přehled: vlevo dokončení + donut, vpravo metriky 2×2 */
 .ttsOverview {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(240px, 380px);
@@ -243,7 +242,7 @@
   border-bottom: 0;
 }
 
-/* Střed v hlavičce i buňce; v datech bez tučného řezu */
+/* Centered header and cells; data cells not bold */
 .ttsTable th.ttsMid,
 .ttsTable td.ttsMid {
   text-align: center;

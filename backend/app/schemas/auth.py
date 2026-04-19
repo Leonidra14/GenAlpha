@@ -20,8 +20,6 @@ class RegisterIn(BaseModel):
     
 
 class LoginIn(BaseModel):
-    """E-mail (učitelé) nebo přihlašovací jméno žáka (příjmení + id, např. koroptvicka15)."""
-
     login: str = Field(..., min_length=1, max_length=255)
     password: str = Field(min_length=1, max_length=72)
 

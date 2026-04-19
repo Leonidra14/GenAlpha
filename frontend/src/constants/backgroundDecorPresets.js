@@ -1,6 +1,4 @@
-/**
- * Sdílené parametry pro useRandomDecorations)
- */
+/** Presets for `useRandomDecorations`. */
 export const backgroundDecorPresets = {
   /** TeacherMainPage, StudentMainPage (ClassListPageLayout) */
   mainList: {
@@ -29,10 +27,7 @@ export const backgroundDecorPresets = {
     flightsRange: 1,
   },
 
-  /**
-   * TeacherClassDetail, StudentClassDetail, TeacherTopicDetail
-   * (defaultní počty hvězd/letadel z useRandomDecorations)
-   */
+  /** TeacherClassDetail, StudentClassDetail, TeacherTopicDetail */
   classTopicDetail: {
     seed: 123,
     starsMin: 50,

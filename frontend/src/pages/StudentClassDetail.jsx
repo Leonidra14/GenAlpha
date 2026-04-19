@@ -159,13 +159,13 @@ export default function StudentClassDetail() {
           </div>
         </div>
 
-        {/* card: kapitoly */}
+        {/* Chapters */}
         <div className="tcdCard">
           <div className="tcdCardHeader">
             <div className="tcdCardTitle">Kapitoly</div>
           </div>
 
-          {/* Ještě ne (jako "Aktivní") */}
+          {/* Not done yet */}
           <div className="tcdSection">
             <div className="tcdSectionTitle">Ještě ne</div>
 
@@ -195,7 +195,7 @@ export default function StudentClassDetail() {
             ))}
           </div>
 
-          {/* Hotovo (jako "Neaktivní") */}
+          {/* Done */}
           <div className="tcdSection">
             <div className="tcdSectionTitle muted">Hotovo</div>
 

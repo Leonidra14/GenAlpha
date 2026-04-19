@@ -60,9 +60,9 @@ export default function TeacherClassStats() {
   const randomDecos = useRandomDecorations(backgroundDecorPresets.classTopicDetail);
 
   const [classTitle, setClassTitle] = useState("");
-  /** Průměr vs medián pro grafy třídy podle témat (skóre + čas) */
+  /** Per-topic charts: average vs median (score + time) */
   const [classTopicAgg, setClassTopicAgg] = useState("avg");
-  /** Který graf zobrazit: skóre, čas nebo dokončení */
+  /** Which series to show: score, time, or completion */
   const [classTopicChartKind, setClassTopicChartKind] = useState("score");
 
   const [studentDetailOpen, setStudentDetailOpen] = useState(false);

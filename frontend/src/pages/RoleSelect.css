@@ -36,7 +36,7 @@ html, body, #root {
 .roleWrap {
   width: min(1100px, 100%);
   margin: 0 auto;
-  padding-top: 140px;  /* udělá místo pro logo */
+  padding-top: 140px;  
   position: relative;
   z-index: 2;
   text-align: center;
@@ -221,7 +221,7 @@ html, body, #root {
 }
 
 .decRandFlight {
-  width: 70px; /* letadýlka větší než hvězdičky */
+  width: 70px; 
   opacity: 0.25;
 }
 

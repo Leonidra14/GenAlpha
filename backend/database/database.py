@@ -1,4 +1,6 @@
 # app/database/database.py
+"""Database engine, session factory, and idempotent ALTERs for legacy databases."""
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, declarative_base
 import os
@@ -46,8 +48,8 @@ def ensure_quiz_attempts_bonus_columns() -> None:
 
 def ensure_users_login_key_and_email_nullable() -> None:
     """
-    create_all() neupravuje existující tabulky. Přidá login_key, uvolní NOT NULL na email,
-    doplní login_key u studentů.
+    create_all() does not ALTER existing tables. Adds student login_key, makes email nullable,
+    then backfills login_key for rows that need it.
     """
     from app.core.student_login_key import build_student_login_key, strip_last_name_for_login
 
@@ -74,10 +76,10 @@ def ensure_users_login_key_and_email_nullable() -> None:
         )
         conn.execute(text("ALTER TABLE users ALTER COLUMN email DROP NOT NULL"))
 
-    # Doplnění login_key pro existující studenty (ORM — malá data)
+    # Backfill login_key for existing students (ORM; small dataset)
     db = SessionLocal()
     try:
-        from models.users import User  # noqa: WPS433 — až po vytvoření tabulek
+        from models.users import User  # noqa: WPS433 — import after tables exist
 
         q = db.query(User).filter(User.role == "student", User.login_key.is_(None))
         for u in q.all():
@@ -95,6 +97,7 @@ def ensure_users_login_key_and_email_nullable() -> None:
 
 
 def get_db():
+    """FastAPI dependency: one Session per request, closed in finally."""
     db = SessionLocal()
     try:
         yield db

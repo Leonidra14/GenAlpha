@@ -152,13 +152,13 @@ html, body, #root { height: 100%; }
   border-radius: 14px;
   background: rgba(255,255,255,0.75);
   border: 1px solid rgba(120,130,180,0.22);
-  box-shadow: 0 10px 18px rgba(60,80,190,0.08);
+  box-shadow: var(--ga-shadow-field);
   min-width: 260px;
 }
 
 /*
- * Sdílené textové pole: input / textarea / select ve stránkách importujících tento soubor.
- * Modály používají .gaModalInput* (viz styles/modal.css); kvíz žáka .sqs* (viz StudentQuizSession.css).
+ * Text fields: .tcdInput; number spinners — styles/input-shared.css (imported in main.jsx).
+ * Modals: .gaModalInput* (styles/modal.css); student quiz: .sqs* (StudentQuizSession.css).
  */
 .tcdInput {
   width: 100%;
@@ -173,17 +173,8 @@ html, body, #root { height: 100%; }
   color-scheme: light;
 }
 
-.tcdInput[type="number"]{
+.tcdInput[type="number"] {
   text-align: right;
-  -moz-appearance: textfield;
-  appearance: textfield;
-}
-
-/* Šedé WebKit šipky u type="number" — skryté; zadání pořád funguje, šipky na klávesnici také */
-.tcdInput[type="number"]::-webkit-outer-spin-button,
-.tcdInput[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
 }
 
 .tcdInput::placeholder{
@@ -360,7 +351,7 @@ html, body, #root { height: 100%; }
   margin-top: 8px;
 }
 
-/* Hint nad tlačítkem (hlavní / bonus kvíz) — stejná typografie jako .tcdEmpty + .stdTopicHint */
+/* Hint above main/bonus quiz button — same type scale as .tcdEmpty + .stdTopicHint */
 .stdTopicHint--beforeBtn{
   margin-top: 12px;
   margin-bottom: 8px;
@@ -512,7 +503,7 @@ html, body, #root { height: 100%; }
   color: #111111;
 }
 
-/* teacher topic — quiz náhled */
+/* Teacher topic — quiz preview */
 .ttQuizPreview{
   display: grid;
   gap: 14px;

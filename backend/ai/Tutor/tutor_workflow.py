@@ -21,7 +21,7 @@ TUTOR_HISTORY_MESSAGE_CAP = 10
 TUTOR_RECENT_USER_SNIPPETS = 2
 _MAX_PARSE_RETRIES = 3
 
-# Krátké navazující reakce — při existující konverzaci neposílat do přísného klasifikátoru
+# Short follow-ups: skip strict classifier when there is prior chat context
 _LOW_INFO_FOLLOWUPS_RAW = {
     "ano",
     "jo",
@@ -204,7 +204,6 @@ def classify_intent(
     kvizova_otazka: str,
     tutor_messages: list[dict[str, Any]],
 ) -> TutorClassifyOut:
-    """LLM klasifikace; volání až po kontrole fast-pathu (viz classify_with_fast_path)."""
     chat_history_text = format_chat_history_text(tutor_messages)
     system_text = prompts.classify_system()
     user_text = prompts.classify_user(
@@ -268,7 +267,7 @@ def classify_with_fast_path(
 
 
 def should_refuse(classification: TutorClassifyOut) -> Literal["offtopic", "cheating"] | None:
-    """Vrátí důvod refusal nebo None = generovat tutor odpověď (vč. meta / zmatení / nejasné navázání)."""
+    """Return refusal kind, or None to generate a tutor reply (incl. meta / confusion / vague follow-up)."""
     if classification.refuse_reason == "cheating":
         return "cheating"
     if classification.refuse_reason == "offtopic" and not classification.is_relevant:
@@ -361,7 +360,7 @@ def check_answer_safe(
             return parsed
         except Exception as e:
             if attempt == _MAX_PARSE_RETRIES - 1:
-                logger.error("Kontrola bezpečnosti odpovědi tutora selhala: %s", e)
+                logger.error("Tutor reply safety check failed: %s", e)
                 raise
             logger.warning("Pokus %s o safety tutora selhal: %s", attempt + 1, e)
     raise RuntimeError("unreachable")
@@ -404,7 +403,7 @@ def rewrite_unsafe_answer(
             raise ValueError("empty rewrite content")
         except Exception as e:
             if attempt == _MAX_PARSE_RETRIES - 1:
-                logger.error("Úprava nebezpečné odpovědi tutora selhala: %s", e)
+                logger.error("Failed to sanitize unsafe tutor reply: %s", e)
                 raise
             logger.warning("Pokus %s o rewrite tutora selhal: %s", attempt + 1, e)
     raise RuntimeError("unreachable")

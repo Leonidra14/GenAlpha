@@ -265,7 +265,7 @@ export default function TeacherTopicDetail() {
 
         <div className="ttTopicDetailLayout">
           <div className="ttTopicDetailMain">
-            {/* HISTORY: v Tvorbě jen mazání */}
+            {/* Build tab: version history is delete-only */}
             {tab === "build" && (
               <VersionHistoryCard
                 history={history}

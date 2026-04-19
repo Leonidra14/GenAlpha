@@ -1,3 +1,5 @@
+"""Login, register, refresh access token (httpOnly refresh cookie), /auth/me."""
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session

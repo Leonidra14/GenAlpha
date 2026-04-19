@@ -54,7 +54,7 @@ function formatFinishedAt(iso) {
   return d.toLocaleString("cs-CZ", { dateStyle: "medium", timeStyle: "short" });
 }
 
-/** Skóre bez zbytečného „.0“ u celých čísel. */
+/** Format score without a trailing ".0" for integers. */
 function formatScoreForDisplay(n) {
   const x = Number(n);
   if (!Number.isFinite(x)) return "0";
@@ -70,7 +70,7 @@ function pickRandomMascotMessage(messages) {
   return messages[idx];
 }
 
-/** Nejdřív kategorie podle % správně, pak náhodná věta z příslušné sady. */
+/** Pick mascot image/message by correct %, then random line in that bucket. */
 function mascotForCorrectPct(pctRaw) {
   const p = Math.min(100, Math.max(0, Number(pctRaw) || 0));
   if (p > 85) {

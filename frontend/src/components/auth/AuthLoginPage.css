@@ -52,7 +52,7 @@ html, body, #root { height: 100%; }
   padding: 10px 12px; border-radius: 14px;
   background: rgba(255,255,255,0.75);
   border: 1px solid rgba(120,130,180,0.22);
-  box-shadow: 0 10px 18px rgba(60,80,190,0.08);
+  box-shadow: var(--ga-shadow-field);
 }
 .tloginIcon{ width: 22px; opacity: .65; }
 .tloginInput{ width: 100%; border: 0; outline: none; background: transparent; font-size: 14px; color: rgba(35,36,58,0.9); }

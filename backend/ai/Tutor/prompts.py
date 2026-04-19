@@ -1,6 +1,3 @@
-"""Textové šablony pro interaktivního tutora během kvízu (klasifikace intencí + generování)."""
-
-
 def _escape_for_prompt(s: str) -> str:
     return (s or "").strip()
 

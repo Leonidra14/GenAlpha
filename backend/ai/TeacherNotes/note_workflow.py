@@ -14,7 +14,6 @@ from app.core.openai_client import (
 )
 from app.schemas.note_generation import ContextCheckOut, AutoTagOut
 
-# Inicializace loggeru pro sledování opravných pokusů
 logger = logging.getLogger(__name__)
 
 YEAR_RE = re.compile(r"\b(1[0-9]{3}|20[0-9]{2})\b")

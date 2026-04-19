@@ -1,3 +1,4 @@
+/** Low-level fetch to VITE_API_URL: Bearer token, JSON body, 401 refresh + retry once. */
 const API_URL = import.meta.env.VITE_API_URL;
 
 export async function apiFetch(path, options = {}) {

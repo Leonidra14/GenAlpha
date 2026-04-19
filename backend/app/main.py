@@ -1,4 +1,6 @@
 # app/main.py
+"""FastAPI entrypoint: create tables, apply DB patches, register routers."""
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.auth import router as auth_router
@@ -19,15 +21,14 @@ from models.enrollments import Enrollment
 from models.topic_progress import TopicProgress
 from models.quiz_attempts import QuizAttempt
 
-
-# vytvoření tabulek
+# Import all models so they attach to Base.metadata before create_all().
 Base.metadata.create_all(bind=engine)
 ensure_quiz_attempts_bonus_columns()
 ensure_users_login_key_and_email_nullable()
 
 app = FastAPI()
 
-# CORS – aby se frontend (http://localhost:5173) mohl připojit
+# Local Vite dev server; production web is usually same-origin behind a proxy.
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
@@ -41,21 +42,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-
-# router pro třídy
+# API surface: 
 app.include_router(classes_router.router, prefix="/classes", tags=["classes"])
-# router pro autentizaci
 app.include_router(auth_router)
-# router pro témata
 app.include_router(topics_router)
-# router pro zápisy studentů do tříd
 app.include_router(enrollments_router, prefix="/classes", tags=["enrollments"])
-# router pro generování poznámek
 app.include_router(note_generation_router.router, tags=["note_generation"])
-# router pro ukládání finálních poznámek
 app.include_router(topic_notes_router.router, tags=["topic-notes"])
-# router pro kvízy
 app.include_router(quiz_router.router, tags=["quiz"])
 
 

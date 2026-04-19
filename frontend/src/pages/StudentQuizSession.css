@@ -1,9 +1,7 @@
-/* Light card UI; :root uses a light foreground when the OS prefers dark mode, which clashes here. */
 .sqsPage {
   color: #1a2244;
 }
 
-/* Dráha kvízu: segmenty + letadlo na pruhu směrem k cíli */
 .sqsPage .sqsProgress {
   margin: 0 0 0.65rem;
   width: 100%;
@@ -226,7 +224,7 @@
   --sqs-edge: rgba(31, 170, 106, 0.4);
 }
 
-/* Nativní kolečko schovat — výběr je vidět na celé kartě + badge */
+/* Hide native radio; selection shown on full card + badge */
 .sqsOption input[type="radio"] {
   position: absolute;
   width: 1px;
@@ -351,7 +349,7 @@
   margin-top: 1rem;
 }
 
-/* Bonus: čekání na vygenerování kvízu */
+/* Bonus quiz: generating state */
 .sqsBonusStarting {
   max-width: 32rem;
   margin: 0 auto;
@@ -400,10 +398,10 @@
   color: #1a2244;
 }
 
-/* Tutor (SSE) — plovoucí tlačítko + popup */
+/* Tutor (SSE): FAB + popup */
 .sqsTutorFab {
   position: fixed;
-  /* Nad backdropem (1001) a panelem (1002), aby robot nebyl ztmavený překryvem */
+  /* Above backdrop (1001) and panel (1002) so the mascot is not dimmed */
   z-index: 1003;
   right: max(1rem, env(safe-area-inset-right, 0px));
   bottom: max(1rem, env(safe-area-inset-bottom, 0px));

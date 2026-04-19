@@ -1,5 +1,3 @@
-/** Texty pod maskotem na stránce výsledků kvízu (podle úspěšnosti). */
-
 export const MASCOT_BEST_MESSAGES = [
   "Píp! To byl opravdu špičkový výkon.",
   "Analýza hotova: vedl sis skvěle.",

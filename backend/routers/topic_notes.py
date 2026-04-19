@@ -1,3 +1,5 @@
+"""Persist and read final teacher/student markdown for a topic (separate from AI generation)."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -5,7 +7,7 @@ from database.database import get_db
 from app.deps.auth import require_teacher
 from models.classes import Class
 from models.topics import Topic
-from app.schemas.topic_notes import FinalNotesPatchIn, FinalNotesOut  # ✅ přidán FinalNotesOut
+from app.schemas.topic_notes import FinalNotesPatchIn, FinalNotesOut
 
 router = APIRouter() 
 

@@ -1,3 +1,5 @@
+"""Teacher CRUD for topics under a class, plus copy/import between topics."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List

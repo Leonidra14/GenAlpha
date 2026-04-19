@@ -1,3 +1,5 @@
+"""JWT bearer auth: resolve current user and role-gated helpers for route dependencies."""
+
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError

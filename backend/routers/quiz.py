@@ -1,5 +1,10 @@
 from __future__ import annotations
 
+"""
+Quiz HTTP API: student attempts (in-memory runtime + Postgres rows), bonus flow, teacher stats,
+and tutor SSE. Ephemeral attempt id is used when there is no DB row yet (e.g. bonus preview).
+"""
+
 import copy
 import json
 import logging
@@ -666,7 +671,7 @@ def _persist_finished_attempt(
                 }
             )
 
-    # QuizAttempt.id má Identity() — DB generuje PK; neposílat uuid ani ruční id.
+    # QuizAttempt.id is DB-generated (Identity); do not set uuid or manual id.
     attempt_row = QuizAttempt(
         student_id=state.student_id,
         class_id=state.class_id,
@@ -1523,8 +1528,6 @@ class QuizRegenerateIn(BaseModel):
 
 
 def _md_to_plain_text(md: str) -> str:
-    # pro první verzi stačí "poslat md jako text"
-    # později můžeš zlepšit (strip headings, bullets, links...)
     return (md or "").strip()
 
 
@@ -1536,7 +1539,6 @@ def generate_quiz_for_topic(
     db: Session = Depends(get_db),
     teacher=Depends(get_current_teacher),
 ):
-    # 1) načti topic (a ověř, že patří do class_id)
     topic = (
         db.query(Topic)
         .filter(Topic.id == topic_id, Topic.class_id == class_id)
@@ -1545,16 +1547,13 @@ def generate_quiz_for_topic(
     if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
 
-    # 2) načti class kvůli grade/subject
     cls = db.query(Class).filter(Class.id == class_id).first()
     if not cls:
         raise HTTPException(status_code=404, detail="Class not found")
 
-    # (volitelné) auth check: aby učitel neviděl cizí třídu
     if getattr(cls, "teacher_id", None) != getattr(teacher, "id", None):
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # 3) zdroj pro quiz = teacher_notes_md uložené v DB
     teacher_md = (topic.teacher_notes_md or "").strip()
     if not teacher_md:
         raise HTTPException(
@@ -1564,12 +1563,10 @@ def generate_quiz_for_topic(
 
     plain_text = _md_to_plain_text(teacher_md)
 
-    # 4) sestav metadata pro prompt
     class_grade = str(cls.grade) if cls.grade is not None else ""
     subject = (cls.subject or "").strip()
     chapter_title = (topic.title or "").strip()
 
-    # 5) zavolej LLM workflow
     client = get_client()
     try:
         quiz_dict = generate_quiz(

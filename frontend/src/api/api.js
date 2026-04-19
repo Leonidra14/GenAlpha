@@ -1,3 +1,6 @@
+/**
+ * Typed-ish API wrappers: paths mirror backend routers (/classes, /quiz, …).
+ */
 import { apiFetch } from "./client";
 
 

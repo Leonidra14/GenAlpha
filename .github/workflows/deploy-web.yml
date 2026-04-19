@@ -2,7 +2,7 @@ name: Deploy Web
 on:
   push:
     branches: [ main ]
-    paths: [ 'frontend/**' ]   # spustí se jen když změníš něco ve frontend/
+    paths: [ 'frontend/**' ]   # only when frontend/ changes
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -15,7 +15,7 @@ jobs:
         with:
           node-version: '20.19.0'
 
-      # instalace a build ve složce frontend
+      # install and build in frontend/
       - run: npm ci
         working-directory: frontend
       - name: Run unit tests
@@ -24,7 +24,7 @@ jobs:
       - run: npm run build
         working-directory: frontend
 
-      # nasadíme přímo obsah složky dist
+      # deploy frontend/dist contents
       - uses: azure/webapps-deploy@v3
         with:
           app-name: web-genalpha

@@ -48,7 +48,7 @@ function formatScore(n) {
   return s;
 }
 
-/** Jednoduchá medaile (zlato / stříbro / bronz) jako SVG. */
+/** Simple gold/silver/bronze medal SVG for the leaderboard. */
 function PodiumMedal({ place }) {
   const palette =
     place === 1

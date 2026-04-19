@@ -1,0 +1,19 @@
+/**
+ * Form tweaks shared across pages (see also .tcdInput in TeacherClassDetail.css,
+ * .gaModalInput in modal.css). Imported from main.jsx.
+ */
+
+/* Hide number spinners; page CSS may add e.g. text-align: right on .tcdInput[type="number"]. */
+.tcdInput[type="number"],
+.gaModalInput[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.tcdInput[type="number"]::-webkit-outer-spin-button,
+.tcdInput[type="number"]::-webkit-inner-spin-button,
+.gaModalInput[type="number"]::-webkit-outer-spin-button,
+.gaModalInput[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

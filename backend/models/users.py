@@ -5,6 +5,8 @@ from database.database import Base
 
 
 class User(Base):
+    """Teachers (email login) and students (login_key: last name + id)."""
+
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -22,6 +24,8 @@ class User(Base):
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
 
 class RefreshToken(Base):
+    """Opaque refresh token stored server-side; access JWT is short-lived."""
+
     __tablename__ = "refresh_tokens"
     id = Column(Integer, primary_key=True, index=True)
     token = Column(String, unique=True, index=True, nullable=False)
