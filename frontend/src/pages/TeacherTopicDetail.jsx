@@ -540,7 +540,7 @@ export default function TeacherTopicDetail() {
                 <div style={{ display: "grid", gap: 10, marginBottom: 12 }}>
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <div className="tcdField" style={{ maxWidth: 120 }}>
-                      <div style={{ fontWeight: 800, marginBottom: 6, color: "#333" }}>MCQ</div>
+                      <div style={{ fontWeight: 800, marginBottom: 6, color: "#333" }}>S výběrem možností</div>
                       <input
                         className="tcdInput"
                         type="number"
@@ -564,14 +564,14 @@ export default function TeacherTopicDetail() {
                     </div>
 
                     <div className="tcdField" style={{ maxWidth: 160 }}>
-                      <div style={{ fontWeight: 800, marginBottom: 6, color: "#333" }}>FINAL_OPEN</div>
+                      <div style={{ fontWeight: 800, marginBottom: 6, color: "#333" }}>Otevřená otázka</div>
                       <select
                         className="tcdInput"
                         value={quizFinalOpen}
                         onChange={(e) => setQuizFinalOpen(Number(e.target.value))}
                       >
-                        <option value={1}>1 (doporučeno)</option>
-                        <option value={0}>0</option>
+                        <option value={1}>Ano</option>
+                        <option value={0}>Ne</option>
                       </select>
                     </div>
                   </div>
