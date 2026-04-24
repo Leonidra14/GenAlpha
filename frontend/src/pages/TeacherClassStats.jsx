@@ -70,10 +70,11 @@ export default function TeacherClassStats() {
   const [studentDetail, setStudentDetail] = useState(null);
   const [studentDetailLoading, setStudentDetailLoading] = useState(false);
   const [studentDetailError, setStudentDetailError] = useState("");
+  const [topicDropdownOpen, setTopicDropdownOpen] = useState(false);
 
   const {
-    topicId,
-    setTopicId,
+    selectedTopicIds,
+    setSelectedTopicIds,
     thresholdPercent,
     setThresholdPercent,
     topicOptions,
@@ -118,7 +119,9 @@ export default function TeacherClassStats() {
       setStudentDetailError("");
       setStudentDetailLoading(true);
       try {
-        const d = await getTeacherClassStudentStatsDetail(classId, row.student_id, { topicId });
+        const d = await getTeacherClassStudentStatsDetail(classId, row.student_id, {
+          topicIds: selectedTopicIds,
+        });
         setStudentDetail(d);
       } catch (e) {
         setStudentDetailError(e?.message || "Nepodařilo se načíst detail.");
@@ -126,7 +129,7 @@ export default function TeacherClassStats() {
         setStudentDetailLoading(false);
       }
     },
-    [classId, topicId]
+    [classId, selectedTopicIds]
   );
 
   const closeStudentDetail = useCallback(() => {
@@ -173,6 +176,20 @@ export default function TeacherClassStats() {
   );
 
   const thresholdOptions = [40, 50, 60, 70, 80];
+  const selectedTopicSet = new Set(selectedTopicIds);
+  const topicFilterSummary =
+    selectedTopicIds.length === 0
+      ? "Vyberte témata pro vyhodnocení statistiky"
+      : `${selectedTopicIds.length} vybran${selectedTopicIds.length === 1 ? "é téma" : selectedTopicIds.length < 5 ? "á témata" : "ých témat"}`;
+
+  function toggleTopic(topicId) {
+    setSelectedTopicIds((prev) => {
+      const set = new Set(prev);
+      if (set.has(topicId)) set.delete(topicId);
+      else set.add(topicId);
+      return [...set].sort((a, b) => a - b);
+    });
+  }
 
   return (
     <div className="tcdPage">
@@ -217,23 +234,70 @@ export default function TeacherClassStats() {
           <div className="tcsFilters">
             <label className="tcsFilterField">
               <span className="tcsFilterLabel">Téma</span>
-              <select
-                className="tcsSelect"
-                value={topicId ?? ""}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setTopicId(v === "" ? null : Number(v));
-                }}
-                disabled={topicsLoading}
-              >
-                <option value="">Všechna témata v třídě</option>
-                {topicOptions.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {(t.title || "").trim() || `Téma ${t.id}`}
-                    {t.active === false ? " (neaktivní)" : ""}
-                  </option>
-                ))}
-              </select>
+              <div className="tcsMultiSelect">
+                <button
+                  type="button"
+                  className="tcsSelect tcsDropdownToggle"
+                  onClick={() => setTopicDropdownOpen((v) => !v)}
+                  disabled={topicsLoading}
+                  aria-expanded={topicDropdownOpen}
+                >
+                  <span>{topicFilterSummary}</span>
+                  <span className="tcsDropdownChevron" aria-hidden="true">
+                    {topicDropdownOpen ? "▴" : "▾"}
+                  </span>
+                </button>
+
+                {topicDropdownOpen && (
+                  <div className="tcsDropdownMenu">
+                    <div className="tcsMultiSelectActions">
+                      <button
+                        type="button"
+                        className="tcdBtn compact ghost"
+                        onClick={() =>
+                          setSelectedTopicIds(
+                            topicOptions.map((t) => Number(t.id)).filter(Number.isFinite)
+                          )
+                        }
+                        disabled={topicsLoading || topicOptions.length === 0}
+                      >
+                        Vybrat vše
+                      </button>
+                      <button
+                        type="button"
+                        className="tcdBtn compact ghost"
+                        onClick={() => setSelectedTopicIds([])}
+                        disabled={topicsLoading || selectedTopicIds.length === 0}
+                      >
+                        Zrušit výběr
+                      </button>
+                    </div>
+                    <div className="tcsTopicChecklist">
+                      {topicOptions.map((t) => {
+                        const tid = Number(t.id);
+                        return (
+                          <label key={t.id} className="tcsTopicCheckItem">
+                            <input
+                              type="checkbox"
+                              checked={selectedTopicSet.has(tid)}
+                              onChange={() => toggleTopic(tid)}
+                              disabled={topicsLoading}
+                            />
+                            <span>
+                              {(t.title || "").trim() || `Téma ${t.id}`}
+                              {t.active === false ? " (neaktivní)" : ""}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {selectedTopicIds.length === 0 ? (
+                  <div className="tcsFilterHint">Vyberte témata pro vyhodnocení statistiky</div>
+                ) : null}
+              </div>
             </label>
             <label className="tcsFilterField">
               <span className="tcsFilterLabel">Práh rizika (% skóre)</span>
@@ -256,7 +320,13 @@ export default function TeacherClassStats() {
         {error && <div className="tcdError">{error}</div>}
         {loading && <div className="tcdLoading tcdLoading--darkText">Načítám…</div>}
 
-        {!loading && overview && (
+        {!loading && selectedTopicIds.length === 0 && (
+          <div className="tcdCard" style={{ marginTop: 12 }}>
+            <div className="tcdEmpty">Vyberte témata pro vyhodnocení statistiky.</div>
+          </div>
+        )}
+
+        {!loading && selectedTopicIds.length > 0 && overview && (
           <>
             <div className="tcdCard" style={{ marginTop: 12 }}>
               <div className="tcdCardHeader">

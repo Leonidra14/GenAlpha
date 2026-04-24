@@ -19,7 +19,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 14px 20px;
-  align-items: flex-end;
+  align-items: flex-start;
 }
 
 .tcsFilterField {
@@ -27,6 +27,7 @@
   flex-direction: column;
   gap: 6px;
   min-width: min(100%, 220px);
+  align-self: flex-start;
 }
 
 .tcsFilterLabel {
@@ -49,6 +50,69 @@
 
 .tcsFilterNote {
   margin-top: 10px;
+}
+
+.tcsMultiSelect {
+  min-width: min(100%, 220px);
+}
+
+.tcsMultiSelectSummary {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: rgba(35, 36, 58, 0.88);
+}
+
+.tcsMultiSelectActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.tcsDropdownToggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.tcsDropdownChevron {
+  margin-left: 10px;
+  opacity: 0.75;
+}
+
+.tcsDropdownMenu {
+  position: static;
+  margin-top: 8px;
+  border: 1px solid rgba(120, 130, 180, 0.35);
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 12px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(26, 40, 88, 0.08);
+}
+
+.tcsTopicChecklist {
+  display: grid;
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tcsTopicCheckItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(35, 36, 58, 0.92);
+}
+
+.tcsFilterHint {
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(35, 36, 58, 0.58);
 }
 
 .tcsTrendToggles {

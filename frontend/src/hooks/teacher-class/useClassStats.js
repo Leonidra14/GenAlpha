@@ -11,7 +11,7 @@ import {
 const DEFAULT_THRESHOLD = 50;
 
 export function useClassStats(classId) {
-  const [topicId, setTopicId] = useState(null);
+  const [selectedTopicIds, setSelectedTopicIds] = useState([]);
   const [thresholdPercent, setThresholdPercent] = useState(DEFAULT_THRESHOLD);
 
   const [topicOptions, setTopicOptions] = useState([]);
@@ -44,15 +44,22 @@ export function useClassStats(classId) {
   const load = useCallback(async () => {
     if (!classId) return;
     setError("");
+    if (!selectedTopicIds.length) {
+      setOverview(null);
+      setTopicStats(null);
+      setRisk(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [o, tp, r] = await Promise.all([
         getTeacherClassStatsOverview(classId, {
-          topicId,
+          topicIds: selectedTopicIds,
           riskThresholdPercent: thresholdPercent,
         }),
-        getTeacherClassTopicStats(classId, { topicId }),
-        getTeacherClassRiskStudents(classId, { topicId, thresholdPercent }),
+        getTeacherClassTopicStats(classId, { topicIds: selectedTopicIds }),
+        getTeacherClassRiskStudents(classId, { topicIds: selectedTopicIds, thresholdPercent }),
       ]);
       setOverview(o);
       setTopicStats(tp);
@@ -65,7 +72,7 @@ export function useClassStats(classId) {
     } finally {
       setLoading(false);
     }
-  }, [classId, topicId, thresholdPercent]);
+  }, [classId, selectedTopicIds, thresholdPercent]);
 
   useEffect(() => {
     loadTopics();
@@ -76,12 +83,12 @@ export function useClassStats(classId) {
   }, [load]);
 
   const regenerateRisk = useCallback(async () => {
-    if (!classId) return;
+    if (!classId || !selectedTopicIds.length) return;
     setRiskRegenerateError("");
     setRiskRegenerating(true);
     try {
       const r = await regenerateTeacherClassRiskStudents(classId, {
-        topicId,
+        topicIds: selectedTopicIds,
         thresholdPercent,
       });
       setRisk(r);
@@ -90,11 +97,11 @@ export function useClassStats(classId) {
     } finally {
       setRiskRegenerating(false);
     }
-  }, [classId, topicId, thresholdPercent]);
+  }, [classId, selectedTopicIds, thresholdPercent]);
 
   return {
-    topicId,
-    setTopicId,
+    selectedTopicIds,
+    setSelectedTopicIds,
     thresholdPercent,
     setThresholdPercent,
     topicOptions,

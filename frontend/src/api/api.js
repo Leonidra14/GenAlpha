@@ -186,6 +186,12 @@ function buildTeacherClassStatsQuery(params = {}) {
   if (params.topicId != null && params.topicId !== "") {
     q.set("topic_id", String(params.topicId));
   }
+  if (Array.isArray(params.topicIds) && params.topicIds.length > 0) {
+    const cleaned = params.topicIds
+      .map((n) => Number(n))
+      .filter((n) => Number.isInteger(n) && n > 0);
+    if (cleaned.length > 0) q.set("topic_ids", cleaned.join(","));
+  }
   if (params.riskThresholdPercent != null && params.riskThresholdPercent !== "") {
     q.set("risk_threshold_percent", String(params.riskThresholdPercent));
   }
@@ -199,41 +205,42 @@ function buildTeacherClassStatsQuery(params = {}) {
   return s ? `?${s}` : "";
 }
 
-export function getTeacherClassStatsOverview(classId, { topicId, riskThresholdPercent } = {}) {
+export function getTeacherClassStatsOverview(classId, { topicId, topicIds, riskThresholdPercent } = {}) {
   return apiFetch(
-    `/quiz/${classId}/stats/overview${buildTeacherClassStatsQuery({ topicId, riskThresholdPercent })}`
+    `/quiz/${classId}/stats/overview${buildTeacherClassStatsQuery({ topicId, topicIds, riskThresholdPercent })}`
   );
 }
 
-export function getTeacherClassStatsTrend(classId, { topicId, periodDays } = {}) {
+export function getTeacherClassStatsTrend(classId, { topicId, topicIds, periodDays } = {}) {
   return apiFetch(
-    `/quiz/${classId}/stats/trend${buildTeacherClassStatsQuery({ topicId, periodDays })}`
+    `/quiz/${classId}/stats/trend${buildTeacherClassStatsQuery({ topicId, topicIds, periodDays })}`
   );
 }
 
-export function getTeacherClassTopicStats(classId, { topicId } = {}) {
-  return apiFetch(`/quiz/${classId}/stats/topics${buildTeacherClassStatsQuery({ topicId })}`);
+export function getTeacherClassTopicStats(classId, { topicId, topicIds } = {}) {
+  return apiFetch(`/quiz/${classId}/stats/topics${buildTeacherClassStatsQuery({ topicId, topicIds })}`);
 }
 
-export function getTeacherClassRiskStudents(classId, { topicId, thresholdPercent } = {}) {
+export function getTeacherClassRiskStudents(classId, { topicId, topicIds, thresholdPercent } = {}) {
   return apiFetch(
-    `/quiz/${classId}/stats/risk-students${buildTeacherClassStatsQuery({ topicId, thresholdPercent })}`
+    `/quiz/${classId}/stats/risk-students${buildTeacherClassStatsQuery({ topicId, topicIds, thresholdPercent })}`
   );
 }
 
-export function regenerateTeacherClassRiskStudents(classId, { topicId, thresholdPercent } = {}) {
+export function regenerateTeacherClassRiskStudents(classId, { topicId, topicIds, thresholdPercent } = {}) {
   return apiFetch(
     `/quiz/${classId}/stats/risk-students/regenerate${buildTeacherClassStatsQuery({
       topicId,
+      topicIds,
       thresholdPercent,
     })}`,
     { method: "POST" }
   );
 }
 
-export function getTeacherClassStudentStatsDetail(classId, studentId, { topicId } = {}) {
+export function getTeacherClassStudentStatsDetail(classId, studentId, { topicId, topicIds } = {}) {
   return apiFetch(
-    `/quiz/${classId}/stats/students/${studentId}/detail${buildTeacherClassStatsQuery({ topicId })}`
+    `/quiz/${classId}/stats/students/${studentId}/detail${buildTeacherClassStatsQuery({ topicId, topicIds })}`
   );
 }
 
