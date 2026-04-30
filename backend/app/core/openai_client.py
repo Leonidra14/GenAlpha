@@ -1,4 +1,4 @@
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from app.core.settings import settings
 
 
@@ -7,6 +7,12 @@ def get_openai_client() -> OpenAI:
     if not settings.openai_api_key:
         raise RuntimeError("OPENAI_API_KEY není nastavený.")
     return OpenAI(api_key=settings.openai_api_key)
+
+
+def get_async_openai_client() -> AsyncOpenAI:
+    if not settings.openai_api_key:
+        raise RuntimeError("OPENAI_API_KEY není nastavený.")
+    return AsyncOpenAI(api_key=settings.openai_api_key)
 
 
 # ---------- models ----------

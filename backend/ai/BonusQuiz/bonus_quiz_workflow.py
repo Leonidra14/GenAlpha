@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Any, Dict, Literal
 
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app.core.openai_client import model_quality, temp_quality
 from app.schemas.quiz import QuizOut
@@ -38,8 +38,8 @@ def tier_question_counts(tier: BonusQuizTier) -> tuple[int, int, int]:
     return 5, 5, 1
 
 
-def generate_bonus_quiz(
-    client: OpenAI,
+async def generate_bonus_quiz(
+    client: AsyncOpenAI,
     *,
     tier: BonusQuizTier,
     class_grade: str,
@@ -77,7 +77,7 @@ def generate_bonus_quiz(
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            parsed_response = client.beta.chat.completions.parse(
+            parsed_response = await client.beta.chat.completions.parse(
                 model=model_quality(),
                 temperature=temp_quality(),
                 messages=[

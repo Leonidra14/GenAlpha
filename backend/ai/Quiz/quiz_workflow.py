@@ -1,6 +1,6 @@
 import logging
 from typing import Any, Dict
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 from app.core.openai_client import model_quality, temp_quality
 from app.schemas.quiz import FinalOpenEvalParsed, QuizOut
@@ -9,8 +9,8 @@ from . import prompts
 
 logger = logging.getLogger(__name__)
 
-def generate_quiz(
-    client: OpenAI,
+async def generate_quiz(
+    client: AsyncOpenAI,
     *,
     class_grade: str,
     subject: str,
@@ -36,7 +36,7 @@ def generate_quiz(
 
     for attempt in range(max_retries):
         try:
-            parsed_response = client.beta.chat.completions.parse(
+            parsed_response = await client.beta.chat.completions.parse(
                 model=model_quality(),
                 temperature=temp_quality(),
                 messages=[
@@ -55,8 +55,8 @@ def generate_quiz(
             logger.warning(f"Pokus {attempt + 1} o generování kvízu selhal: {e}")
 
 
-def regenerate_quiz(
-    client: OpenAI,
+async def regenerate_quiz(
+    client: AsyncOpenAI,
     *,
     current_quiz_json: str,
     teacher_comment: str,
@@ -71,7 +71,7 @@ def regenerate_quiz(
 
     for attempt in range(max_retries):
         try:
-            parsed_response = client.beta.chat.completions.parse(
+            parsed_response = await client.beta.chat.completions.parse(
                 model=model_quality(),
                 temperature=temp_quality(),
                 messages=[
@@ -90,8 +90,8 @@ def regenerate_quiz(
             logger.warning(f"Pokus {attempt + 1} o regenerování kvízu selhal: {e}")
 
 
-def evaluate_final_open_answer(
-    client: OpenAI,
+async def evaluate_final_open_answer(
+    client: AsyncOpenAI,
     *,
     question_prompt: str,
     student_answer: str,
@@ -115,7 +115,7 @@ def evaluate_final_open_answer(
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            parsed_response = client.beta.chat.completions.parse(
+            parsed_response = await client.beta.chat.completions.parse(
                 model=model_quality(),
                 temperature=temp_quality(),
                 messages=[

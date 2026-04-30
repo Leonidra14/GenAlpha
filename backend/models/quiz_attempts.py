@@ -4,11 +4,6 @@ from database.database import Base
 
 
 class QuizAttempt(Base):
-    """
-    Primární klíč `id` se generuje výhradně v databázi (SERIAL / IDENTITY).
-    Při vkládání nového řádku v kódu nikdy nepredávej `id` — SQLAlchemy ho z INSERTu vynechá
-    a PostgreSQL doplní další hodnotu sekvence.
-    """
 
     __tablename__ = "quiz_attempts"
 

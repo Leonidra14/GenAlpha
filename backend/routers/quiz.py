@@ -30,7 +30,10 @@ from models.quiz_attempts import QuizAttempt
 from models.topic_progress import TopicProgress
 from models.users import User
 
-from app.core.openai_client import get_openai_client as get_client
+from app.core.openai_client import (
+    get_async_openai_client as get_async_client,
+    get_openai_client as get_client,
+)
 from app.core.settings import settings
 from app.schemas.quiz import (
     FinalOpenCriteriaEval,
@@ -124,7 +127,7 @@ class QuizAttemptRuntime:
 @dataclass(frozen=True)
 class ClassRiskCacheKey:
     class_id: int
-    topic_id: Optional[int]
+    topic_ids_key: str
     threshold_bp: int
 
 
@@ -1017,15 +1020,41 @@ def _class_topics_scope(
     db: Session,
     *,
     class_id: int,
-    topic_id: Optional[int],
+    topic_ids: Optional[List[int]],
 ) -> List[Topic]:
     q = db.query(Topic).filter(Topic.class_id == class_id, Topic.active == True)
-    if topic_id is not None:
-        q = q.filter(Topic.id == topic_id)
+    normalized = sorted({int(tid) for tid in (topic_ids or []) if int(tid) > 0})
+    if normalized:
+        q = q.filter(Topic.id.in_(normalized))
     topics = q.order_by(Topic.created_at.asc(), Topic.id.asc()).all()
-    if topic_id is not None and not topics:
+    if normalized and not topics:
         raise HTTPException(status_code=404, detail="Topic not found")
     return topics
+
+
+def _parse_topic_ids_query(
+    *,
+    topic_id: Optional[int],
+    topic_ids_csv: Optional[str],
+) -> Optional[List[int]]:
+    values: List[int] = []
+    if topic_id is not None:
+        values.append(int(topic_id))
+    if topic_ids_csv:
+        for part in str(topic_ids_csv).split(","):
+            token = part.strip()
+            if not token:
+                continue
+            try:
+                val = int(token, 10)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail=f"Invalid topic_ids value: {token}") from exc
+            if val <= 0:
+                raise HTTPException(status_code=400, detail=f"Invalid topic_ids value: {token}")
+            values.append(val)
+    if not values:
+        return None
+    return sorted(set(values))
 
 
 def _class_finished_main_attempts_scope(
@@ -1053,7 +1082,7 @@ def _build_teacher_class_stats_overview(
     db: Session,
     *,
     class_id: int,
-    topic_id: Optional[int],
+    topic_ids: Optional[List[int]],
     risk_threshold_percent: float,
 ) -> TeacherClassStatsOverviewOut:
     enrollment_rows = (
@@ -1065,7 +1094,7 @@ def _build_teacher_class_stats_overview(
     enrolled_ids = {u.id for _, u in enrollment_rows}
     enrolled_count = len(enrolled_ids)
 
-    topics = _class_topics_scope(db, class_id=class_id, topic_id=topic_id)
+    topics = _class_topics_scope(db, class_id=class_id, topic_ids=topic_ids)
     topic_ids = [int(t.id) for t in topics]
     attempts = _class_finished_main_attempts_scope(
         db, class_id=class_id, topic_ids=topic_ids
@@ -1116,7 +1145,7 @@ def _build_teacher_class_stats_trend(
     db: Session,
     *,
     class_id: int,
-    topic_id: Optional[int],
+    topic_ids: Optional[List[int]],
     period_days: int,
 ) -> TeacherClassStatsTrendOut:
     enrollment_ids = {
@@ -1124,7 +1153,7 @@ def _build_teacher_class_stats_trend(
         for enr in db.query(Enrollment).filter(Enrollment.class_id == class_id).all()
     }
     enrolled_count = len(enrollment_ids)
-    topics = _class_topics_scope(db, class_id=class_id, topic_id=topic_id)
+    topics = _class_topics_scope(db, class_id=class_id, topic_ids=topic_ids)
     attempts = _class_finished_main_attempts_scope(
         db, class_id=class_id, topic_ids=[int(t.id) for t in topics]
     )
@@ -1176,14 +1205,14 @@ def _build_teacher_class_topic_stats(
     db: Session,
     *,
     class_id: int,
-    topic_id: Optional[int],
+    topic_ids: Optional[List[int]],
 ) -> TeacherClassTopicStatsOut:
     enrollment_ids = {
         enr.student_id
         for enr in db.query(Enrollment).filter(Enrollment.class_id == class_id).all()
     }
     enrolled_count = len(enrollment_ids)
-    topics = _class_topics_scope(db, class_id=class_id, topic_id=topic_id)
+    topics = _class_topics_scope(db, class_id=class_id, topic_ids=topic_ids)
     topic_ids = [int(t.id) for t in topics]
     all_attempts = _class_finished_main_attempts_scope(
         db, class_id=class_id, topic_ids=topic_ids
@@ -1352,7 +1381,7 @@ def _build_teacher_class_risk_students_fresh(
     db: Session,
     *,
     class_id: int,
-    topic_id: Optional[int],
+    topic_ids: Optional[List[int]],
     threshold_percent: float,
 ) -> TeacherClassRiskStudentsOut:
     enrollment_rows = (
@@ -1363,7 +1392,7 @@ def _build_teacher_class_risk_students_fresh(
     )
     users_by_id = {u.id: u for _, u in enrollment_rows}
     enrolled_ids = set(users_by_id.keys())
-    topics = _class_topics_scope(db, class_id=class_id, topic_id=topic_id)
+    topics = _class_topics_scope(db, class_id=class_id, topic_ids=topic_ids)
     topic_ids = [int(t.id) for t in topics]
     attempts = _class_finished_main_attempts_scope(
         db, class_id=class_id, topic_ids=topic_ids
@@ -1398,8 +1427,8 @@ def _build_teacher_class_risk_students_fresh(
     cls = db.query(Class).filter(Class.id == class_id).first()
     class_grade = str(cls.grade) if cls and cls.grade is not None else ""
     subject = (cls.subject or "").strip() if cls else ""
-    if topic_id is not None:
-        topic_scope = f"topic_id:{topic_id}"
+    if topic_ids:
+        topic_scope = "topic_ids:" + ",".join(str(tid) for tid in topic_ids)
     else:
         topic_scope = "all_active_topics"
 
@@ -1486,13 +1515,15 @@ def _get_teacher_class_risk_students(
     db: Session,
     *,
     class_id: int,
-    topic_id: Optional[int],
+    topic_ids: Optional[List[int]],
     threshold_percent: float,
     force_refresh: bool,
 ) -> TeacherClassRiskStudentsOut:
+    normalized_topic_ids = sorted(set(topic_ids or []))
+    topic_ids_key = ",".join(str(tid) for tid in normalized_topic_ids) if normalized_topic_ids else "all"
     cache_key = ClassRiskCacheKey(
         class_id=int(class_id),
-        topic_id=int(topic_id) if topic_id is not None else None,
+        topic_ids_key=topic_ids_key,
         threshold_bp=_class_risk_threshold_bp(threshold_percent),
     )
     now_utc = datetime.now(timezone.utc)
@@ -1505,7 +1536,7 @@ def _get_teacher_class_risk_students(
     payload = _build_teacher_class_risk_students_fresh(
         db,
         class_id=class_id,
-        topic_id=topic_id,
+        topic_ids=normalized_topic_ids or None,
         threshold_percent=threshold_percent,
     )
     with _class_risk_cache_lock:
@@ -1532,7 +1563,7 @@ def _md_to_plain_text(md: str) -> str:
 
 
 @router.post("/generate/{class_id}/{topic_id}")
-def generate_quiz_for_topic(
+async def generate_quiz_for_topic(
     class_id: int,
     topic_id: int,
     payload: QuizGenerateIn,
@@ -1567,9 +1598,9 @@ def generate_quiz_for_topic(
     subject = (cls.subject or "").strip()
     chapter_title = (topic.title or "").strip()
 
-    client = get_client()
+    client = get_async_client()
     try:
-        quiz_dict = generate_quiz(
+        quiz_dict = await generate_quiz(
             client,
             class_grade=class_grade,
             subject=subject,
@@ -1604,7 +1635,7 @@ def get_final_quiz(
 
 
 @router.post("/{class_id}/{topic_id}/regenerate")
-def regenerate_quiz_for_topic(
+async def regenerate_quiz_for_topic(
     class_id: int,
     topic_id: int,
     payload: QuizRegenerateIn,
@@ -1634,9 +1665,9 @@ def regenerate_quiz_for_topic(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    client = get_client()
+    client = get_async_client()
     try:
-        quiz_dict = regenerate_quiz(
+        quiz_dict = await regenerate_quiz(
             client,
             current_quiz_json=payload.quiz_json,
             teacher_comment=payload.user_note,
@@ -1740,15 +1771,17 @@ def get_teacher_student_quiz_attempt_detail(
 def get_teacher_class_stats_overview(
     class_id: int,
     topic_id: Optional[int] = Query(default=None, ge=1),
+    topic_ids: Optional[str] = Query(default=None, description="CSV topic ids, e.g. 1,2,3"),
     risk_threshold_percent: float = Query(default=50.0, ge=0.0, le=100.0),
     db: Session = Depends(get_db),
     teacher=Depends(get_current_teacher),
 ):
+    scope_topic_ids = _parse_topic_ids_query(topic_id=topic_id, topic_ids_csv=topic_ids)
     _require_teacher_class(db, class_id=class_id, teacher_id=teacher.id)
     return _build_teacher_class_stats_overview(
         db,
         class_id=class_id,
-        topic_id=topic_id,
+        topic_ids=scope_topic_ids,
         risk_threshold_percent=risk_threshold_percent,
     )
 
@@ -1761,15 +1794,17 @@ def get_teacher_class_stats_overview(
 def get_teacher_class_stats_trend(
     class_id: int,
     topic_id: Optional[int] = Query(default=None, ge=1),
+    topic_ids: Optional[str] = Query(default=None, description="CSV topic ids, e.g. 1,2,3"),
     period_days: int = Query(default=30, ge=1, le=365),
     db: Session = Depends(get_db),
     teacher=Depends(get_current_teacher),
 ):
+    scope_topic_ids = _parse_topic_ids_query(topic_id=topic_id, topic_ids_csv=topic_ids)
     _require_teacher_class(db, class_id=class_id, teacher_id=teacher.id)
     return _build_teacher_class_stats_trend(
         db,
         class_id=class_id,
-        topic_id=topic_id,
+        topic_ids=scope_topic_ids,
         period_days=period_days,
     )
 
@@ -1782,14 +1817,16 @@ def get_teacher_class_stats_trend(
 def get_teacher_class_topic_stats(
     class_id: int,
     topic_id: Optional[int] = Query(default=None, ge=1),
+    topic_ids: Optional[str] = Query(default=None, description="CSV topic ids, e.g. 1,2,3"),
     db: Session = Depends(get_db),
     teacher=Depends(get_current_teacher),
 ):
+    scope_topic_ids = _parse_topic_ids_query(topic_id=topic_id, topic_ids_csv=topic_ids)
     _require_teacher_class(db, class_id=class_id, teacher_id=teacher.id)
     return _build_teacher_class_topic_stats(
         db,
         class_id=class_id,
-        topic_id=topic_id,
+        topic_ids=scope_topic_ids,
     )
 
 
@@ -1801,15 +1838,17 @@ def get_teacher_class_topic_stats(
 def get_teacher_class_risk_students(
     class_id: int,
     topic_id: Optional[int] = Query(default=None, ge=1),
+    topic_ids: Optional[str] = Query(default=None, description="CSV topic ids, e.g. 1,2,3"),
     threshold_percent: float = Query(default=50.0, ge=0.0, le=100.0),
     db: Session = Depends(get_db),
     teacher=Depends(get_current_teacher),
 ):
+    scope_topic_ids = _parse_topic_ids_query(topic_id=topic_id, topic_ids_csv=topic_ids)
     _require_teacher_class(db, class_id=class_id, teacher_id=teacher.id)
     return _get_teacher_class_risk_students(
         db,
         class_id=class_id,
-        topic_id=topic_id,
+        topic_ids=scope_topic_ids,
         threshold_percent=threshold_percent,
         force_refresh=False,
     )
@@ -1823,15 +1862,17 @@ def get_teacher_class_risk_students(
 def regenerate_teacher_class_risk_students(
     class_id: int,
     topic_id: Optional[int] = Query(default=None, ge=1),
+    topic_ids: Optional[str] = Query(default=None, description="CSV topic ids, e.g. 1,2,3"),
     threshold_percent: float = Query(default=50.0, ge=0.0, le=100.0),
     db: Session = Depends(get_db),
     teacher=Depends(get_current_teacher),
 ):
+    scope_topic_ids = _parse_topic_ids_query(topic_id=topic_id, topic_ids_csv=topic_ids)
     _require_teacher_class(db, class_id=class_id, teacher_id=teacher.id)
     return _get_teacher_class_risk_students(
         db,
         class_id=class_id,
-        topic_id=topic_id,
+        topic_ids=scope_topic_ids,
         threshold_percent=threshold_percent,
         force_refresh=True,
     )
@@ -1886,10 +1927,10 @@ def _build_teacher_class_student_stats_detail(
     *,
     class_id: int,
     student_id: int,
-    topic_id: Optional[int],
+    topic_ids: Optional[List[int]],
     user: User,
 ) -> TeacherClassStudentDetailOut:
-    topics = _class_topics_scope(db, class_id=class_id, topic_id=topic_id)
+    topics = _class_topics_scope(db, class_id=class_id, topic_ids=topic_ids)
     if not topics:
         fn = (user.first_name or "").strip()
         ln = (user.last_name or "").strip()
@@ -1963,9 +2004,11 @@ def get_teacher_class_student_stats_detail(
     class_id: int,
     student_id: int,
     topic_id: Optional[int] = Query(default=None, ge=1),
+    topic_ids: Optional[str] = Query(default=None, description="CSV topic ids, e.g. 1,2,3"),
     db: Session = Depends(get_db),
     teacher=Depends(get_current_teacher),
 ):
+    scope_topic_ids = _parse_topic_ids_query(topic_id=topic_id, topic_ids_csv=topic_ids)
     _require_teacher_class(db, class_id=class_id, teacher_id=teacher.id)
     _require_enrolled_student(db, class_id=class_id, student_id=student_id)
     user = db.query(User).filter(User.id == student_id).first()
@@ -1975,7 +2018,7 @@ def get_teacher_class_student_stats_detail(
         db,
         class_id=class_id,
         student_id=student_id,
-        topic_id=topic_id,
+        topic_ids=scope_topic_ids,
         user=user,
     )
 
@@ -2034,7 +2077,7 @@ def student_quiz_start(
 
 
 @router.post("/{class_id}/{topic_id}/bonus/start", response_model=QuizStartOut)
-def student_bonus_quiz_start(
+async def student_bonus_quiz_start(
     class_id: int,
     topic_id: int,
     db: Session = Depends(get_db),
@@ -2088,9 +2131,9 @@ def student_bonus_quiz_start(
     chapter_title = (topic.title or "").strip()
     mistakes_str = _mistakes_json_for_bonus_prompt(main_attempt.mistakes_json)
 
-    client = get_client()
+    client = get_async_client()
     try:
-        quiz_dict = generate_bonus_quiz(
+        quiz_dict = await generate_bonus_quiz(
             client,
             tier=tier,
             class_grade=class_grade,
@@ -2143,7 +2186,7 @@ def student_bonus_quiz_start(
     "/{class_id}/{topic_id}/attempts/{attempt_id}/answer",
     response_model=QuizSubmitAnswerOut,
 )
-def student_quiz_submit_answer(
+async def student_quiz_submit_answer(
     class_id: int,
     topic_id: int,
     attempt_id: str,
@@ -2205,9 +2248,9 @@ def student_quiz_submit_answer(
             feedback=None,
         )
     elif q_type == "final_open":
-        client = get_client()
+        client = get_async_client()
         try:
-            eval_result = evaluate_final_open_answer(
+            eval_result = await evaluate_final_open_answer(
                 client,
                 question_prompt=q_prompt,
                 student_answer=payload.answer,

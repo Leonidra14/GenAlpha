@@ -52,7 +52,7 @@ STUDIJNÍ POZNÁMKY STUDENTA (primární zdroj faktů pro bonus; může být Mar
 CHYBY / PROBLÉMOVÉ ČÁSTI Z POSLEDNÍHO HLAVNÍHO POKUSU (JSON nebo text; může být prázdné):
 {mistakes_json}
 
-PŮVODNÍ HLAVNÍ KVÍZ K TÉMATU (JSON – inspirace stylu a pokrytí, negeneruj kopii 1:1):
+PŮVODNÍ HLAVNÍ KVÍZ K TÉMATU (JSON – inspirace stylu a pokrytí, nepoužívej stejné otázky jako v base_quiz_json):
 {base_quiz_json}
 
 ÚKOL:
@@ -60,6 +60,7 @@ PŮVODNÍ HLAVNÍ KVÍZ K TÉMATU (JSON – inspirace stylu a pokrytí, negeneru
 2) Pořadí typů je libovolné, ale na konci musí být přesně jedna otázka typu final_open (poslední v seznamu questions).
 3) Počty: {mcq}× mcq, {yesno}× yesno, {final_open}× final_open.
 4) FINAL_OPEN musí být jedna kreativní závěrečná úloha vhodná pro předmět a ročník (obtížnost vždy 15).
+   - otázka je jednodušší než final_open v base_quiz_json
    - délka očekávané odpovědi studenta je vždy určená na počet vět, NE na počet slov nebo znaků.
    - 1.–5. třída: cca 5 vět | 6.–7. třída: cca 7 vět | 8.–9. třída: cca 10 vět
 
@@ -101,7 +102,8 @@ PŮVODNÍ HLAVNÍ KVÍZ K TÉMATU (JSON – reference, ne kopie):
 1) Bonusový kvíz pouze z poznámek; propoj s typickými chybami studenta.
 2) Poslední otázka v seznamu musí být přesně jedna final_open.
 3) Počty: {mcq}× mcq, {yesno}× yesno, {final_open}× final_open.
-4) FINAL_OPEN: kreativní závěrečná úloha, obtížnost 15, očekávaný rozsah odpovědi podle ročníku ve větách (viz níže).
+4) FINAL_OPEN: kreativní závěrečná úloha, obtížnost 15, očekávaný rozsah odpovědi podle ročníku ve větách 
+(viz níže). Její obtížnost je podobná jako ve  final_open v base_quiz_json.
 
 Rozsah odpovědi u final_open (počet vět, ne slov):
 - 1.–5. třída: cca 5 vět | 6.–7. třída: cca 7 vět | 8.–9. třída: cca 10 vět
